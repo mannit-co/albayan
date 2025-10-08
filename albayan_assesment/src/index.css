@@ -1,0 +1,203 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Professional Exam Platform Design System - All colors MUST be HSL */
+
+@layer base {
+  :root {
+    --background: 220 15% 97%;
+    --foreground: 215 25% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+
+    /* Professional blue color scheme */
+    --primary: 214 84% 56%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 214 84% 51%;
+
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 215 25% 20%;
+
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 16% 46%;
+
+    --accent: 214 50% 95%;
+    --accent-foreground: 214 84% 56%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 20% 88%;
+    --input: 214 20% 94%;
+    --ring: 214 84% 56%;
+
+    /* Exam Status Colors */
+    --status-not-visited: 0 0% 85%;
+    --status-not-answered: 0 84% 60%;
+    --status-answered: 142 71% 45%;
+    --status-marked: 45 93% 58%;
+    --status-answered-marked: 263 85% 60%;
+
+    /* Exam UI Colors */
+    --exam-header: 215 28% 17%;
+    --exam-sidebar: 210 20% 98%;
+    --exam-panel: 0 0% 100%;
+    
+    /* Camera Recording */
+    --recording-indicator: 0 84% 60%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(214 84% 56%), hsl(214 84% 46%));
+    --gradient-success: linear-gradient(135deg, hsl(142 71% 45%), hsl(142 71% 40%));
+    --gradient-header: linear-gradient(90deg, hsl(215 28% 17%), hsl(215 28% 22%));
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+@layer components {
+  /* Exam Platform Specific Styles */
+  .exam-container {
+    @apply h-screen flex flex-col bg-background overflow-hidden;
+  }
+  
+  .exam-header {
+    @apply bg-gradient-to-r from-[hsl(var(--exam-header))] to-[hsl(var(--exam-header))] 
+           text-white px-6 py-4 flex items-center justify-between shadow-lg;
+  }
+  
+  .exam-content {
+    @apply flex-1 flex overflow-hidden;
+  }
+  
+  .question-panel {
+    @apply flex-1 bg-[hsl(var(--exam-panel))] p-6 overflow-y-auto;
+  }
+  
+  .question-palette {
+    @apply w-80 bg-[hsl(var(--exam-sidebar))] border-l border-border p-4 overflow-y-auto;
+  }
+  
+  .palette-button {
+    @apply w-10 h-10 rounded-full border-2 flex items-center justify-center 
+           text-sm font-medium transition-all duration-200 hover:scale-105 cursor-pointer;
+  }
+  
+  .palette-button.not-visited {
+    @apply bg-[hsl(var(--status-not-visited))] border-[hsl(var(--status-not-visited))] 
+           text-gray-600;
+  }
+  
+  .palette-button.not-answered {
+    @apply bg-[hsl(var(--status-not-answered))] border-[hsl(var(--status-not-answered))] 
+           text-white;
+  }
+  
+  .palette-button.answered {
+    @apply bg-[hsl(var(--status-answered))] border-[hsl(var(--status-answered))] 
+           text-white;
+  }
+  
+  .palette-button.marked {
+    @apply bg-[hsl(var(--status-marked))] border-[hsl(var(--status-marked))] 
+           text-white;
+  }
+  
+  .palette-button.answered-marked {
+    @apply bg-[hsl(var(--status-answered-marked))] border-[hsl(var(--status-answered-marked))] 
+           text-white;
+  }
+  
+  .camera-preview {
+    @apply fixed top-20 right-6 w-36 h-28 bg-black rounded-lg border-2 border-[hsl(var(--recording-indicator))] 
+           shadow-lg z-50 overflow-hidden;
+  }
+  
+  .recording-indicator {
+    @apply absolute top-1 left-1 bg-[hsl(var(--recording-indicator))] text-white 
+           text-xs px-2 py-1 rounded flex items-center gap-1;
+  }
+  
+  .recording-dot {
+    @apply w-2 h-2 bg-white rounded-full animate-pulse;
+  }
+  
+  .exam-timer {
+    @apply bg-gradient-to-r from-[hsl(var(--destructive))] to-red-600 
+           text-white px-4 py-2 rounded-lg font-mono font-bold text-lg shadow-lg;
+  }
+  
+  .security-warning {
+    @apply fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[9999] 
+           text-white text-center p-8;
+  }
+}
