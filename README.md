@@ -43,7 +43,9 @@ npm run dev
 The application will now be running locally. You can access it in your browser at the default port (usually http://localhost:3000, depending on your configuration).
 
 Albayan Backend Service provided as a .Jar file.
-============================================================================================= DB Details =================================================
+
+*** DB Details ***
+
 **📦 MongoDB Collection Documentation**
 
 Database: **common-mannit**
