@@ -178,7 +178,7 @@ export const SendInvitesModal = ({
           {/* Email Subject */}
           <div className="mt-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {t("emailSubject")} ({t("optional")})
+              {t("emailSubject")} 
             </label>
             <input
               type="text"
@@ -192,7 +192,7 @@ export const SendInvitesModal = ({
           {/* Custom Email Body */}
           <div className="mt-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {t("customEmailBody")} ({t("optional", "Optional")})
+              {t("customEmailBody")} 
             </label>
             <textarea
               value={customEmailBody}

@@ -146,7 +146,7 @@ export const translations = {
     entermaximumattempts: "Enter maximum attempts",
     additionaldetails: "Additional Details",
     entertestdescription: "Enter test description",
-    questionsfor: "Questions for:",
+    questionsfor: "Questions for",
     image: "Image",
     answer: "Answer",
     time: "Time",
@@ -650,6 +650,9 @@ export const translations = {
     emailSubject:"Email Subject",
     emailSubjectPlaceholder:"Enter email subject",
     allStatus: "All Status",
+
+    sendmessage :"Send Message", 
+    sendmessageto :"Send Message To ",
   },
 
   ar: {

@@ -5,7 +5,6 @@ import { uid, BaseUrl } from "../../Api/Api";
 import { toast } from "react-hot-toast";
 import { useLanguage } from "../../contexts/LanguageContext";
 
-
 const CandidatesReport = () => {
   const { t } = useLanguage();
   const [selectedCandidate, setSelectedCandidate] = useState(null);
@@ -13,6 +12,8 @@ const CandidatesReport = () => {
   const [availableTests, setAvailableTests] = useState([]);
   const [selectedTest, setSelectedTest] = useState("all");
   const [candidates, setCandidates] = useState([]);
+  const [testHistory, setTestHistory] = useState([]);
+
 
   // Retrieve token from sessionStorage
   const getToken = () => {
@@ -83,7 +84,6 @@ const CandidatesReport = () => {
     fetchAvailableTests();
   }, []);
 
-
   // ✅ Fetch candidates dynamically
   useEffect(() => {
     const fetchCandidates = async () => {
@@ -123,71 +123,72 @@ const CandidatesReport = () => {
         // ❌ console.log('data', data)  <-- remove this
         // ✅ instead:
         console.log("allData", allData);
-      const normalizedCandidates = allData
-  .filter(c => (c.testHistory && c.testHistory.length > 0) || c.performanceSummary)
-  .map((c) => {
-    // Use the root-level score instead of testHistory score
-    const rootScore = c.score ?? c.performanceSummary?.overallScore ?? 0;
-    const lastTestName =
-      (c.testHistory && c.testHistory.length > 0
-        ? c.testHistory[c.testHistory.length - 1].testName
-        : "N/A") || "N/A";
+        const normalizedCandidates = allData
+          .filter(
+            (c) =>
+              (c.testHistory && c.testHistory.length > 0) ||
+              c.performanceSummary
+          )
+        .map((c) => {
+  const rootScore = c.score ?? c.performanceSummary?.overallScore ?? 0;
+  const lastTestName =
+    (c.testHistory && c.testHistory.length > 0
+      ? c.testHistory[c.testHistory.length - 1].testName
+      : "N/A") || "N/A";
 
-    // Format last activity date
-    let lastActivity = "N/A";
-    if (c.testHistory && c.testHistory.length > 0) {
-      const lastTest = c.testHistory[c.testHistory.length - 1];
-      const cleanDateStr = lastTest.date.replace("IST", "").trim();
-      const dateObj = new Date(cleanDateStr);
-      if (!isNaN(dateObj.getTime())) {
-        const day = String(dateObj.getDate()).padStart(2, "0");
-        const month = String(dateObj.getMonth() + 1).padStart(2, "0");
-        const year = dateObj.getFullYear();
-        lastActivity = `${day}-${month}-${year}`;
-      }
+  let lastActivity = "N/A";
+  if (c.testHistory && c.testHistory.length > 0) {
+    const lastTest = c.testHistory[c.testHistory.length - 1];
+    const cleanDateStr = lastTest.date.replace("IST", "").trim();
+    const dateObj = new Date(cleanDateStr);
+    if (!isNaN(dateObj.getTime())) {
+      const day = String(dateObj.getDate()).padStart(2, "0");
+      const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const year = dateObj.getFullYear();
+      lastActivity = `${day}-${month}-${year}`;
     }
+  }
 
-    return {
-      id: c._id?.$oid || c._id || null, // Add candidate ID
-      name: c.name || c.personalInformation?.name || "Unknown",
-      email: c.email || c.personalInformation?.email || "N/A",
-      phone: c.phone || c.personalInformation?.phone || "N/A",
-      testName: lastTestName,
-      testsCompleted: c.performanceSummary?.testsAttempted ?? 0,
-      averageScore: `${rootScore}`, // ✅ use root-level score
-      performance: {
-        label:
-          rootScore >= 90
-            ? "Excellent"
-            : rootScore >= 75
-            ? "Good"
-            : rootScore >= 50
-            ? "Average"
-            : "Poor",
-        color:
-          rootScore >= 90
-            ? "text-green-600"
-            : rootScore >= 75
-            ? "text-blue-600"
-            : rootScore >= 50
-            ? "text-yellow-600"
-            : "text-red-600",
-      },
-      lastActivity,
-      status: {
-        label: c.status || "Completed",
-        color:
-          c.status === "Active"
-            ? "bg-green-100 text-green-800"
-            : c.status === "Completed"
-            ? "bg-blue-100 text-blue-800"
-            : c.status === "In Progress"
-            ? "bg-yellow-100 text-yellow-800"
-            : "bg-gray-100 text-gray-800",
-      },
-    };
-  });
-
+  return {
+    id: c._id?.$oid || c._id || null,
+    name: c.name || c.personalInformation?.name || "Unknown",
+    email: c.email || c.personalInformation?.email || "N/A",
+    phone: c.phone || c.personalInformation?.phone || "N/A",
+    testName: lastTestName,
+    averageScore: `${rootScore}`,
+    testHistory: c.testHistory || [], // ✅ ADD THIS LINE
+    performance: {
+      label:
+        rootScore >= 90
+          ? "Excellent"
+          : rootScore >= 75
+          ? "Good"
+          : rootScore >= 50
+          ? "Average"
+          : "Poor",
+      color:
+        rootScore >= 90
+          ? "text-green-600"
+          : rootScore >= 75
+          ? "text-blue-600"
+          : rootScore >= 50
+          ? "text-yellow-600"
+          : "text-red-600",
+    },
+    lastActivity,
+    status: {
+      label: c.status || "Completed",
+      color:
+        c.status === "Active"
+          ? "bg-green-100 text-green-800"
+          : c.status === "Completed"
+          ? "bg-blue-100 text-blue-800"
+          : c.status === "In Progress"
+          ? "bg-yellow-100 text-yellow-800"
+          : "bg-gray-100 text-gray-800",
+    },
+  };
+});
 
 
         setCandidates(normalizedCandidates);
@@ -211,8 +212,6 @@ const CandidatesReport = () => {
       statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)
     );
   });
-
-
 
   // 🔽 Helper: Download Report (EN or AR)
   const handleDownloadReport = async (lang, candidateId) => {
@@ -302,6 +301,18 @@ const CandidatesReport = () => {
     }
   };
 
+  // 1️⃣ Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // 2️⃣ Paginated candidates
+  const paginatedCandidates = filteredCandidates.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // 3️⃣ Total pages
+  const totalPages = Math.ceil(filteredCandidates.length / itemsPerPage);
 
   return (
     <div className="space-y-6">
@@ -370,7 +381,7 @@ const CandidatesReport = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredCandidates.map((candidate, idx) => (
+              {paginatedCandidates.map((candidate, idx) => (
                 <tr key={idx} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
@@ -438,6 +449,29 @@ const CandidatesReport = () => {
               ))}
             </tbody>
           </table>
+          <div className="flex justify-center items-center space-x-4 mt-4">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              {t("previous") || "Previous"}
+            </button>
+
+            <span className="text-sm font-medium">
+              {t("page") || "Page"} {currentPage} {t("of") || "of"} {totalPages}
+            </span>
+
+            <button
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage === totalPages}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              {t("next") || "Next"}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Cards */}
@@ -486,14 +520,14 @@ const CandidatesReport = () => {
                   <FaEye size={14} />
                   <span>{t("view")}</span>
                 </button>
-                <button 
+                <button
                   className="text-blue-600 hover:text-blue-900 text-sm font-medium flex items-center space-x-1"
                   onClick={() => handleDownloadReport("EN", candidate.id)}
                 >
                   <FaDownload size={14} />
                   <span>EN</span>
                 </button>
-                <button 
+                <button
                   className="text-blue-600 hover:text-blue-900 text-sm font-medium flex items-center space-x-1"
                   onClick={() => handleDownloadReport("AR", candidate.id)}
                 >
