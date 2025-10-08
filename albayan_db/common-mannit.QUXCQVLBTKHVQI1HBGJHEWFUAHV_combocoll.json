@@ -1,0 +1,40 @@
+[{
+  "_id": {
+    "$oid": "68ad416e26a5716f170d74bf"
+  },
+  "collname": "LAN",
+  "AL": {
+    "English": "English",
+    "Hindi": "Hindi",
+    "Arabic": "Arabic",
+    "Spanish": "Spanish"
+  }
+},
+{
+  "_id": {
+    "$oid": "68b16ad428b246a0da570d56"
+  },
+  "collname": "QUESTYPE",
+  "QUESTYPE": {
+    "Single Selection": "SingleSelect",
+    "Multiple Select": "MultipleSelect",
+    "Yes/No": "Yes/No",
+    "True/False": "True/False",
+    "Fillup": "Fillup",
+    "Essay": "Essay",
+    "Coding": "Coding",
+    "Image": "Image",
+    "Disc": "Disc"
+  }
+},
+{
+  "_id": {
+    "$oid": "68b811ff38661b08fd461af8"
+  },
+  "collname": "ROLES",
+  "ROLES": {
+    "Admin": "2",
+    "HR": "3",
+    "SuperAdmin": "1"
+  }
+}]

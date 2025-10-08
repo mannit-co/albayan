@@ -1,0 +1,66 @@
+[
+{
+  "_id": {
+    "$oid": "68b85bb4b0f00665b62481b9"
+  },
+  "firstName": "SUPERADMIN",
+  "lastName": "SA",
+  "company": "ALBAYAN",
+  "mobileno": {
+    "$numberLong": "7777777777"
+  },
+  "role": "1",
+  "email": "albayan@gmail.com",
+  "password": "Admin@123",
+  "confirmPassword": "Admin@123",
+  "domain": "ALBAYANHUB",
+  "subdomain": "albayanhub",
+  "username": "albayan@gmail.com",
+  "userId": {
+    "$oid": "68b85bb3b0f00665b62481b8"
+  }
+},
+{
+  "_id": {
+    "$oid": "68b85eb4b0f00665b62481bb"
+  },
+  "firstName": "HR",
+  "lastName": "hr",
+  "company": "ALBAYAN",
+  "mobileno": {
+    "$numberLong": "9999888899"
+  },
+  "role": "3",
+  "email": "hr@gmail.com",
+  "password": "Admin@123",
+  "confirmPassword": "Admin@123",
+  "domain": "ALBAYANHUB",
+  "subdomain": "albayanhub",
+  "username": "hr@gmail.com",
+  "userId": {
+    "$oid": "68b85eb3b0f00665b62481ba"
+  },
+  "sa": "68b85bb3b0f00665b62481b8"
+},
+{
+  "_id": {
+    "$oid": "68b950a6b0f00665b62481d9"
+  },
+  "firstName": "ADMIN",
+  "lastName": "A",
+  "company": "ALBAYAN",
+  "mobileno": {
+    "$numberLong": "8667275188"
+  },
+  "role": "2",
+  "email": "admin@gmail.com",
+  "password": "Admin@123",
+  "confirmPassword": "Admin@123",
+  "domain": "ALBAYANHUB",
+  "subdomain": "albayanhub",
+  "username": "admin@gmail.com",
+  "sa": "68b85bb3b0f00665b62481b8",
+  "userId": {
+    "$oid": "68b950a6b0f00665b62481d8"
+  }
+}]
