@@ -13,6 +13,7 @@ interface ExamSummaryProps {
   onBack: () => void;
   onSubmit: () => void;
   onOk?: () => void;
+  allTestResponses?: any[]; // All accumulated responses from all tests
 }
 
 export const ExamSummary: React.FC<ExamSummaryProps> = ({
@@ -21,7 +22,8 @@ export const ExamSummary: React.FC<ExamSummaryProps> = ({
   questionStatus,
   onBack,
   onSubmit,
-  onOk
+  onOk,
+  allTestResponses
 }) => {
     const [showSuccess, setShowSuccess] = useState(false); 
 
@@ -37,10 +39,20 @@ export const ExamSummary: React.FC<ExamSummaryProps> = ({
 
       const handleOkClick = () => {
         setShowSuccess(false);
+        
+        // Set exam as completed and ensure proper navigation
+        sessionStorage.setItem('examCompleted', 'true');
+        
+        // Clear any test-related states that might interfere
+        sessionStorage.removeItem('unifiedTestStarted');
+        sessionStorage.removeItem('currentTestIndex');
+        sessionStorage.removeItem('currentView');
+        
         if (onOk) {
           onOk();
         } else {
-          navigate('/'); // fallback: navigate to Index page
+          // Navigate to home and force Assessment Completed view
+          window.location.href = '/';
         }
       };
     
@@ -62,7 +74,7 @@ export const ExamSummary: React.FC<ExamSummaryProps> = ({
       case 'marked':
         return <AlertCircle className="w-5 h-5 text-yellow-600" />;
       case 'not-answered':
-        return <XCircle className="w-5 h-5 text-red-600" />;
+        return <XCircle className="w-5 h-5 text-blue-600" />;
       default:
         return <Circle className="w-5 h-5 text-gray-400" />;
     }
@@ -91,40 +103,104 @@ export const ExamSummary: React.FC<ExamSummaryProps> = ({
       notVisited: 0
     };
 
-    questions.forEach((_, index) => {
-      const status = getQuestionStatus(index);
-      switch (status) {
-        case 'answered':
+    // If we have accumulated responses from all tests, count them
+    if (allTestResponses && allTestResponses.length > 0) {
+      // Count from all accumulated responses with improved logic
+      allTestResponses.forEach((response) => {
+        // More accurate answered/not answered detection
+        const isAnswered = isResponseAnswered(response);
+        
+        if (isAnswered) {
           counts.answered++;
-          break;
-        case 'answered-marked':
-          counts.answered++;
-          counts.markedForReview++;
-          break;
-        case 'marked':
-          counts.markedForReview++;
+        } else {
           counts.notAnswered++;
-          break;
-        case 'not-answered':
-          counts.notAnswered++;
-          break;
-        case 'not-visited':
-          counts.notVisited++;
-          break;
-      }
-    });
+        }
+      });
+    } else {
+      // Fallback to current test questions if no accumulated data
+      questions.forEach((_, index) => {
+        const status = getQuestionStatus(index);
+        switch (status) {
+          case 'answered':
+            counts.answered++;
+            break;
+          case 'answered-marked':
+            counts.answered++;
+            counts.markedForReview++;
+            break;
+          case 'marked':
+            counts.markedForReview++;
+            counts.notAnswered++;
+            break;
+          case 'not-answered':
+            counts.notAnswered++;
+            break;
+          case 'not-visited':
+            counts.notVisited++;
+            break;
+        }
+      });
+    }
 
     return counts;
   };
 
+  // Helper function to determine if a response is actually answered
+  const isResponseAnswered = (response: any): boolean => {
+    if (!response || !response.Selopt) {
+      return false;
+    }
+
+    const selOpt = response.Selopt.toString().trim();
+    
+    // Empty response is not answered
+    if (selOpt === '') {
+      return false;
+    }
+
+    // For specific question types, apply different logic
+    switch (response.type) {
+      case 'True/False':
+      case 'Yes/No':
+        // For boolean questions, check if response is not empty
+        return selOpt !== '' && selOpt !== null && selOpt !== undefined;
+        
+      case 'SingleSelect':
+      case 'MultipleSelect':
+      case 'Image':
+        // Should have 'Option X' format or valid content
+        return selOpt.length > 0;
+        
+      case 'Essay':
+      case 'Coding':
+      case 'Fillup':
+        // Any non-empty text is considered answered
+        return selOpt.length > 0;
+        
+      case 'Disc':
+        // DISC questions should have option selected or content
+        return selOpt.length > 0;
+        
+      default:
+        // For any other type, non-empty is answered
+        return selOpt.length > 0;
+    }
+  };
+
   const counts = getStatusCounts();
+
+  // Debug logging to help identify counting issues
+  console.log('ExamSummary Debug Info:');
+  console.log('- All test responses count:', allTestResponses?.length || 0);
+  console.log('- Calculated counts:', counts);
+  console.log('- Sample responses:', allTestResponses?.slice(0, 3));
 
   return (
     <div className="exam-container">
       <div className="exam-header">
-        <h1 className="text-xl font-bold">Exam Summary</h1>
+        <h1 className="text-xl font-bold">Assessment Summary</h1>
         <div className="text-sm opacity-90">
-          Review your responses before final submission
+          Review your responses from all tests before final submission
         </div>
       </div>
 
@@ -141,9 +217,9 @@ export const ExamSummary: React.FC<ExamSummaryProps> = ({
                   <div className="text-2xl font-bold text-green-600">{counts.answered}</div>
                   <div className="text-sm text-green-600">Answered</div>
                 </div>
-                <div className="text-center p-4 bg-red-50 rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">{counts.notAnswered}</div>
-                  <div className="text-sm text-red-600">Not Answered</div>
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">{counts.notAnswered}</div>
+                  <div className="text-sm text-blue-600">Not Answered</div>
                 </div>
                 <div className="text-center p-4 bg-yellow-50 rounded-lg">
                   <div className="text-2xl font-bold text-yellow-600">{counts.markedForReview}</div>
@@ -226,7 +302,7 @@ export const ExamSummary: React.FC<ExamSummaryProps> = ({
             
             <Button
               onClick={handleFinalSubmit}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
               size="lg"
             >
               <Send className="w-4 h-4" />
@@ -243,7 +319,7 @@ export const ExamSummary: React.FC<ExamSummaryProps> = ({
                 <p>Your answers have been submitted successfully.</p>
                 <Button
                   onClick={handleOkClick}
-                  className="mt-4 px-8"
+                  className="mt-4 px-8 bg-green-600 hover:bg-green-700 text-white"
                 >
                   OK
                 </Button>
