@@ -624,7 +624,8 @@ export const translations = {
     searchbytitle: "Search by title, category, difficulty, skills", //changed to arabic
     questionSelection: "Question Selection",
     selectSkillsToChooseQuestions: "Select Skills To Choose Questions",
-    autoselect: "This will auto-select all questions that match the chosen skill.",
+    autoselect:
+      "This will auto-select all questions that match the chosen skill.",
     questionsMatchingSkills: "Questions Matching Selected Skills",
     addMoreQuestions: "Add More Questions",
     selectMultipleSkills: "Select Multiple Skills",
@@ -642,29 +643,30 @@ export const translations = {
     candidateRemovedSuccessfully: "Candidate removed successfully",
     failedToRemoveCandidate: "Failed to remove candidate",
     optional: "Optional",
-    emailBodyNote: "This message will be included in the invitation email sent to candidates.",
+    emailBodyNote:
+      "This message will be included in the invitation email sent to candidates.",
     questionRemoved: "Question removed successfully.",
-    minQuestions: "Min Questions",
-    selectedQuestions: "Selected Questions",
-
-    emailSubject:"Email Subject",
-    emailSubjectPlaceholder:"Enter email subject",
+    minQuestions: "Min questions to be answered",
+    selectedQuestions: "Selected Questions",     
+    emailSubject: "Email Subject",
+    emailSubjectPlaceholder: "Enter email subject",
     allStatus: "All Status",
-
-    sendmessage :"Send Message", 
-    sendmessageto :"Send Message To ",
-    allassessment :"All Assessment",
+    sendmessage: "Send Message",
+    sendmessageto: "Send Message To ",
+    allassessment: "All Assessment",
+    noDataAvailable: "No data available",
+    acrossAllTests :"Across all tests ",
   },
 
   ar: {
+    minQuestions:"الحد الأدنى من الأسئلة التي يجب الإجابة عليها",
     emailSubject: "موضوع البريد الإلكتروني",
-emailSubjectPlaceholder: "أدخل موضوع البريد الإلكتروني",
+    emailSubjectPlaceholder: "أدخل موضوع البريد الإلكتروني",
     allStatus: "جميع الحالات",
     sendmessage: "إرسال الرسالة",
     sendmessageto: "إرسال الرسالة إلى",
     allassessment: "جميع التقييمات",
-
-    
+    noDataAvailable: "لا توجد بيانات متاحة",
     minQuestions: "الحد الأدنى من الأسئلة",
     selectedQuestions: "الأسئلة المختارة",
     questionRemoved: "تم حذف السؤال بنجاح.",
@@ -683,7 +685,8 @@ emailSubjectPlaceholder: "أدخل موضوع البريد الإلكتروني"
     candidateRemovedSuccessfully: "تمت إزالة المرشح بنجاح",
     failedToRemoveCandidate: "فشل في إزالة المرشح",
     optional: "اختياري",
-    emailBodyNote: "سيتم تضمين هذه الرسالة في البريد الإلكتروني للدعوة المرسل إلى المرشحين.",
+    emailBodyNote:
+      "سيتم تضمين هذه الرسالة في البريد الإلكتروني للدعوة المرسل إلى المرشحين.",
     questionSelection: "اختيار الأسئلة",
     selectSkillsToChooseQuestions: "اختر المهارات لاختيار الأسئلة",
     autoselect: "سيتم تحديد جميع الأسئلة المطابقة للمهارة المختارة تلقائيًا",

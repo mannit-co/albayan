@@ -10,6 +10,7 @@ import Candidates from "./Pages/Candidates/Candidates";
 import Reports from "./Pages/Reports/Overview";
 import Settings from "./Pages/Settings";
 import { LanguageProvider } from "./contexts/LanguageContext";
+import { UserProvider } from "./contexts/UserContext";
 import TestPreview from "./Pages/Testlibrary/TestPreviewTabs/TestPreview";
 import Profile from "./Pages/Profile";
 import ChangePassword from "./Pages/ChangePassword";
@@ -18,8 +19,9 @@ import AssessmentLibrary from "./Pages/AssessmentLibrary/AssessmentLibrary";
 
 function App() {
   return (
-    <LanguageProvider>
-      <Router>
+    <UserProvider>
+      <LanguageProvider>
+        <Router>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Login />} />
@@ -42,6 +44,7 @@ function App() {
         </Routes>
       </Router>
     </LanguageProvider>
+    </UserProvider>
   );
 }
 

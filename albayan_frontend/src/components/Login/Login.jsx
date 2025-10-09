@@ -3,6 +3,7 @@ import { LuMail, LuLock, LuEye, LuArrowRight, LuEyeOff } from "react-icons/lu";
 import logo from "../../images/logo.png";
 import { useNavigate } from "react-router-dom";
 import { BaseUrl, uid } from "../../Api/Api";
+import { useUser } from "../../contexts/UserContext";
 import { Toaster, toast } from "react-hot-toast";
 import { useLanguage } from "../../contexts/LanguageContext";
 
@@ -13,6 +14,7 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({ email: "", password: "", general: "" });
     const { t } = useLanguage();
+    const { updateUserInfo } = useUser();
 
     const navigate = useNavigate();
 
@@ -78,6 +80,9 @@ if (!response.ok) {
 
             //  Store login response
             sessionStorage.setItem("loginResponse", JSON.stringify(result));
+
+            // Update user info in context
+            updateUserInfo();
 
             toast.success(t("loggedInSuccessfully") || "Logged in successfully!");
             setTimeout(() => navigate("/dashboard"), 1000);

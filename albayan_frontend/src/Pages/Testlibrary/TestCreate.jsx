@@ -1678,7 +1678,7 @@ const TestCreate = () => {
                     {/* Min Questions */}
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                        {t("minQuestions", "Min Questions")} <span className="text-red-500">*</span>
+                        {t("minQuestions")} <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="number"

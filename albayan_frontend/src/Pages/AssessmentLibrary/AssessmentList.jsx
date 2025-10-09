@@ -21,6 +21,7 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [candidatesToInvite, setCandidatesToInvite] = useState([]);
     const [selectedAssessment, setSelectedAssessment] = useState(null);
+    const [selectedAssessmentExpiryDate, setSelectedAssessmentExpiryDate] = useState(null);
     const [showTestNamesModal, setShowTestNamesModal] = useState(false);
     const [selectedTestNames, setSelectedTestNames] = useState([]);
     const [removingCandidateId, setRemovingCandidateId] = useState(null);
@@ -49,6 +50,30 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
             const year = date.getFullYear();
 
             return `${day}/${month}/${year}`; // ✅ shows 04/10/2025
+        } catch (error) {
+            return "N/A";
+        }
+    };
+
+    // Format expiry date in DD-MM-YYYY format specifically
+    const formatExpiryDate = (dateField) => {
+        if (!dateField) return "N/A";
+
+        try {
+            // Handle MongoDB-style { "$date": "..." }
+            if (typeof dateField === 'object' && dateField.$date) {
+                dateField = dateField.$date;
+            }
+
+            const date = new Date(dateField);
+            if (isNaN(date.getTime())) return "N/A";
+
+            // Force DD-MM-YYYY format
+            const day = String(date.getDate()).padStart(2, "0");
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const year = date.getFullYear();
+
+            return `${day}-${month}-${year}`; // ✅ shows 16-10-2025
         } catch (error) {
             return "N/A";
         }
@@ -190,6 +215,8 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
         };
     };
 
+
+    console.log("assessmentList:", assessmentList)
     // Pagination component
     const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         // Always show pagination, even if there's only 1 page or no data
@@ -273,10 +300,10 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
                             role: parsed.role || "N/A",
                             status: parsed.status || "N/A",
                             testCompleted: parsed.testCompleted || false,
-                            assT: parsed.assT ,
+                            assT: parsed.assT,
                             completedAt: parsed.completedAt || null,
                             scheduledDate: parsed.scheduledDate || null,
-                            expiryDate :parsed.expiryDate || null,
+                            expiryDate: parsed.expiryDate || null,
                             inviteStatus: parsed.inviteStatus || "pending",
 
                         };
@@ -303,7 +330,7 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
     };
 
     // Handle invite candidates for assessment
-    const handleInviteForAssessment = async (assessmentId, assessmentTitle, candidateIds) => {
+    const handleInviteForAssessment = async (assessmentId, assessmentTitle, candidateIds, expiryDate) => {
         if (!token || !userId) return;
 
         const loadingKey = assessmentId;
@@ -358,8 +385,8 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
                             testCompleted: parsed.testCompleted || false,
                             completedAt: parsed.completedAt || null,
                             scheduledDate: parsed.scheduledDate || null,
-                            expiryDate :parsed.expiryDate || null,
-                            assT: parsed.assT ,
+                            expiryDate: parsed.expiryDate || null,
+                            assT: parsed.assT,
                         };
                         candidatesWithAssessment.push(candidateInfo);
                     }
@@ -367,6 +394,8 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
                     console.error("Error processing candidate data:", error);
                 }
             });
+
+            console.log('expiryDAte', expiryDate)
 
             if (candidatesWithAssessment.length === 0) {
                 toast.error("No candidates found for this assessment");
@@ -376,6 +405,22 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
             // Set candidates and assessment for invitation
             setCandidatesToInvite(candidatesWithAssessment);
             setSelectedAssessment({ id: assessmentId, title: assessmentTitle });
+            setSelectedAssessmentExpiryDate(expiryDate);
+            // Set default email subject and body
+            setEmailSubject("Your Al-Bayan Assessment Test Link");
+            setCustomEmailBody(`Hi,
+
+You have been invited to take an assessment on the Albayan Assessment Hub.
+
+📅 Assessment Expiry Date: ${expiryDate && expiryDate.$date ? new Date(expiryDate.$date).toLocaleDateString('en-GB', { timeZone: 'UTC' }) : 'Not Provided'}
+
+Please ensure you complete the assessment before the expiry date. This assessment is an important part of our evaluation process.
+
+If you have any questions or encounter technical issues, please contact our support team at support@albayan.com.
+
+Wishing you all the best!`);
+
+
             setShowInviteModal(true);
 
         } catch (error) {
@@ -435,7 +480,7 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
 
             // Refresh the assessment list to update counts
             fetchAssessmentList();
-            
+
             // Close the confirmation modal
             setShowDeleteConfirmModal(false);
             setCandidateToDelete(null);
@@ -531,6 +576,7 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
             setShowInviteModal(false);
             setCandidatesToInvite([]);
             setSelectedAssessment(null);
+            setSelectedAssessmentExpiryDate(null);
             setCustomEmailBody(""); // Reset custom email body
             setEmailSubject(""); // Reset email subject
 
@@ -652,9 +698,9 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
                                         <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase ">
                                             {t("State")}
                                         </th>
-                                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase ">
+                                        {/* <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase ">
                                             {t("TotalCompleted")}
-                                        </th>
+                                        </th> */}
                                         <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase ">
                                             {t("totalCandidates")}
                                         </th>
@@ -710,9 +756,9 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
                                                             {assessment.state}
                                                         </span>
                                                     </td>
-                                                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                                                    {/* <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                         <div className="text-sm text-gray-600">{assessment.totalCompleted}</div>
-                                                    </td>
+                                                    </td> */}
                                                     <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                         <button
                                                             onClick={() => fetchAssessmentCandidates(assessment.id, assessment.assessmentName, assessment.candidateIds)}
@@ -730,11 +776,11 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
                                                     </td>
                                                     <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-center">
                                                         <button
-                                                            onClick={() => handleInviteForAssessment(assessment.id, assessment.assessmentName, assessment.candidateIds)}
+                                                            onClick={() => handleInviteForAssessment(assessment.id, assessment.assessmentName, assessment.candidateIds, assessment.originalData?.expiryDate)}
                                                             disabled={inviteLoading.has(assessment.id) || assessment.inviteStatus === 'invited'}
                                                             className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${assessment.inviteStatus === 'invited'
-                                                                    ? 'text-green-700 bg-green-50 border border-green-200'
-                                                                    : 'text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:text-blue-700'
+                                                                ? 'text-green-700 bg-green-50 border border-green-200'
+                                                                : 'text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:text-blue-700'
                                                                 }`}
                                                             title={assessment.inviteStatus === 'invited' ? "Already invited" : "Send invitations to candidates"}
                                                         >
@@ -880,7 +926,7 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
                     </div>
                 )}
 
-                
+
                 {showInviteModal && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
@@ -893,7 +939,9 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
                                         setShowInviteModal(false);
                                         setCandidatesToInvite([]);
                                         setSelectedAssessment(null);
+                                        setSelectedAssessmentExpiryDate(null);
                                         setCustomEmailBody("");
+                                        setEmailSubject("");
                                     }}
                                     className="text-gray-400 hover:text-gray-600"
                                 >
@@ -920,7 +968,7 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
                                 {/* Email Subject */}
                                 <div className="mt-4">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        {t("emailSubject", "Email Subject")} 
+                                        {t("emailSubject", "Email Subject")}
                                     </label>
                                     <input
                                         type="text"
@@ -959,7 +1007,9 @@ const AssessmentList = ({ onBack, token, userId, tests }) => {
                                         setShowInviteModal(false);
                                         setCandidatesToInvite([]);
                                         setSelectedAssessment(null);
+                                        setSelectedAssessmentExpiryDate(null);
                                         setCustomEmailBody("");
+                                        setEmailSubject("");
                                     }}
                                     className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50"
                                     disabled={inviteLoading.has('sending')}

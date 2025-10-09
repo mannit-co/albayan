@@ -19,7 +19,7 @@ import {
   Legend,
 } from "recharts";
 
-const COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#9CA3AF"]; // Green, Blue, Orange, Gray
+const COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#E75480"]; // Green, Blue, Orange, Gray
 
 const TestPerformance = ({ selectedDays = "7d" }) => {
   const { t } = useLanguage();
@@ -55,10 +55,10 @@ const TestPerformance = ({ selectedDays = "7d" }) => {
       if (data.performanceDistribution) {
         const perfDist = data.performanceDistribution;
         const newPieData = [
-          { name: t('excellent'), value: perfDist["Excellent (90-100%)"] || 0 },
-          { name: t('good'), value: perfDist["Good (80-89%)"] || 0 },
           { name: t('average'), value: perfDist["Average (70-79%)"] || 0 },
           { name: t('belowAverage'), value: perfDist["Below Average (<70%)"] || 0 },
+          { name: t('excellent'), value: perfDist["Excellent (90-100%)"] || 0 },
+          { name: t('good'), value: perfDist["Good (80-89%)"] || 0 },
         ];
         setPieData(newPieData);
       }
@@ -166,7 +166,7 @@ const TestPerformance = ({ selectedDays = "7d" }) => {
                             <span className="text-xs sm:text-sm text-gray-700 font-medium">
                               {value}{" "}
                               <span className="text-gray-900 font-bold">
-                                {pieData[index].value}%
+                                {entry.value}%
                               </span>
                             </span>
                           )}
@@ -249,7 +249,7 @@ const TestPerformance = ({ selectedDays = "7d" }) => {
               ) : (
                 <tr>
                   <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
-                    {t('noDataAvailable', 'No data available')}
+                    {t('noDataAvailable')}
                   </td>
                 </tr>
               )}

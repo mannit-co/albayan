@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { userInfo, uid, BaseUrl } from "../Api/Api";
+import { uid, BaseUrl } from "../Api/Api";
+import { useUser } from "../contexts/UserContext";
 import { toast } from "react-hot-toast";
 import { useLanguage } from "../contexts/LanguageContext";
 import { FiEye, FiEyeOff } from "react-icons/fi"; // 👀 eye icons
 
 const ChangePassword = () => {
   const { t } = useLanguage();
+  const { userInfo } = useUser();
   const [formData, setFormData] = useState({
     username: "",
     otp: "",
@@ -25,7 +27,7 @@ const ChangePassword = () => {
     if (userInfo?.username) {
       setFormData((prev) => ({ ...prev, username: userInfo.username }));
     }
-  }, []);
+  }, [userInfo]);
 
   const handleChange = (e) => {
     setFormData({

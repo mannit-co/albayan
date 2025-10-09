@@ -1,19 +1,22 @@
 import React from "react";
-import { userInfo } from "../Api/Api";
+import { useUser } from "../contexts/UserContext";
 import { useLanguage } from "../contexts/LanguageContext";
 
 const Profile = () => {
   const { t } = useLanguage();
-  
+  const { userInfo } = useUser();
+
   if (!userInfo) {
     return (
       <div className="p-6 text-center text-gray-500">
-        {t('noUserInformation')}
+        {t("noUserInformation")}
       </div>
     );
   }
 
-  const initials = `${userInfo.firstName?.charAt(0) || ""}${userInfo.lastName?.charAt(0) || ""}`.toUpperCase();
+  const initials = `${userInfo.firstName?.charAt(0) || ""}${
+    userInfo.lastName?.charAt(0) || ""
+  }`.toUpperCase();
 
   return (
     <div className="max-w-4xl mx-auto p-6 mt-10">
@@ -30,7 +33,7 @@ const Profile = () => {
                 {userInfo.firstName} {userInfo.lastName}
               </h2>
               <p className="text-gray-500 text-sm">{userInfo.email}</p>
-              <p className="text-gray-400 text-xs">{t('administrator')}</p>
+              <p className="text-gray-400 text-xs">{t("administrator")}</p>
             </div>
           </div>
         </div>
@@ -38,24 +41,32 @@ const Profile = () => {
         {/* Info Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
           <div>
-            <p className="text-gray-500 text-sm">{t('username')}</p>
+            <p className="text-gray-500 text-sm">{t("username")}</p>
             <p className="text-gray-900 font-medium">{userInfo.username}</p>
           </div>
           <div>
-            <p className="text-gray-500 text-sm">{t('company')}</p>
+            <p className="text-gray-500 text-sm">{t("company")}</p>
             <p className="text-gray-900 font-medium">{userInfo.company}</p>
           </div>
           <div>
-            <p className="text-gray-500 text-sm">{t('mobile')}</p>
+            <p className="text-gray-500 text-sm">{t("mobile")}</p>
             <p className="text-gray-900 font-medium">{userInfo.mobileno}</p>
           </div>
           <div>
-            <p className="text-gray-500 text-sm">{t('createdAt')}</p>
-            <p className="text-gray-900 font-medium">{userInfo.creationdate}</p>
+            <p className="text-gray-500 text-sm">{t("createdAt")}</p>
+            <p className="text-gray-900 font-medium">
+              {userInfo.creationdate?.$date
+                ? new Date(userInfo.creationdate.$date).toLocaleString()
+                : userInfo.creationdate || "—"}
+            </p>{" "}
           </div>
           <div>
-            <p className="text-gray-500 text-sm">{t('updatedAt')}</p>
-            <p className="text-gray-900 font-medium">{userInfo.updated_at}</p>
+            <p className="text-gray-500 text-sm">{t("updatedAt")}</p>
+            <p className="text-gray-900 font-medium">
+              {userInfo.updated_at?.$date
+                ? new Date(userInfo.updated_at.$date).toLocaleString()
+                : userInfo.updated_at || "—"}
+            </p>
           </div>
         </div>
       </div>

@@ -1,8 +1,15 @@
 import React, { useEffect, useState, useRef } from "react";
-import { BaseUrl, uid, fetchTotalCandidates } from "../Api/Api"; 
+import { BaseUrl, uid } from "../Api/Api";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
-import { FaUser, FaUsers, FaChartLine, FaClipboardList,FaChartBar,FaTrophy   } from "react-icons/fa";
+import {
+  FaUser,
+  FaUsers,
+  FaChartLine,
+  FaClipboardList,
+  FaChartBar,
+  FaTrophy,
+} from "react-icons/fa";
 
 const Dashboard = () => {
   const { t } = useLanguage();
@@ -10,7 +17,12 @@ const Dashboard = () => {
   const [invitedCandidates, setInvitedCandidates] = useState("0");
   const [recentResults, setRecentResults] = useState([]);
   const [activeAssessments, setActiveAssessments] = useState("0");
+  const [totalResults, setTotalResults] = useState(0);
+  const [completionRate, setCompletionRate] = useState("0%");
   const [dailyChartData, setDailyChartData] = useState([]);
+  const [userRole, setUserRole] = useState(null);
+  const [averageScore, setAverageScore] = useState("0%");
+  const [topPerformers, setTopPerformers] = useState("0");
 
   const navigate = useNavigate();
 
@@ -42,11 +54,14 @@ const Dashboard = () => {
       if (parsedData.source) {
         const sourceObj = JSON.parse(parsedData.source);
         token = sourceObj.token;
+   // Extract user role
+        setUserRole(sourceObj.role || null);
       }
     }
     if (!token) {
       console.error("Token not found");
     }
+    console.log('loginRespone',storedData)
     return token;
   };
   const fetchInvitedCandidates = async () => {
@@ -114,8 +129,11 @@ const Dashboard = () => {
         try {
           const parsed = typeof item === "string" ? JSON.parse(item) : item;
           if (parsed.asnT && Array.isArray(parsed.asnT)) {
-            const testNames = parsed.asnT.map(test => test.title).sort().join(', ');
-            const assessmentTitle = parsed.assT || 'Untitled Assessment';
+            const testNames = parsed.asnT
+              .map((test) => test.title)
+              .sort()
+              .join(", ");
+            const assessmentTitle = parsed.assT || "Untitled Assessment";
             const assessmentKey = `${assessmentTitle}_${testNames}`;
 
             if (!assessmentMap.has(assessmentKey)) {
@@ -135,9 +153,71 @@ const Dashboard = () => {
     }
   };
 
+  const fetchTotalResults = async () => {
+    const token = getToken();
+    try {
+      let allData = [];
+      let page = 1;
+      const limit = 100;
+
+      while (true) {
+        const response = await fetch(
+          `${BaseUrl}/auth/retrievecollection?distinct_field=email&ColName=${uid}_Result&page=${page}&limit=${limit}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              xxxid: uid,
+            },
+          }
+        );
+
+        const data = await response.json();
+        if (data?.source && Array.isArray(data.source)) {
+          allData = allData.concat(data.source);
+          if (data.source.length < limit) break;
+        } else {
+          break;
+        }
+        page++;
+      }
+
+      setTotalResults(allData.length);
+    } catch (err) {
+      console.error("Failed to fetch total results:", err);
+      setTotalResults(0);
+    }
+  };
+
   // Fetch daily assessment activity data
   const fetchDailyAssessmentActivity = async () => {
     const token = getToken();
+
+    // Process data for last 7 days (initialize with 0s)
+    const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const today = new Date();
+    const last7Days = [];
+
+    // Get last 7 days starting from today
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
+
+      last7Days.push({
+        day: daysOfWeek[date.getDay()],
+        date: date,
+        nextDate: nextDate,
+        assessments: 0,
+        uniqueAssessments: new Set(),
+        completions: 0,
+      });
+    }
+
     try {
       // Fetch assessments created (from Candidates collection)
       let candidatesData = [];
@@ -195,44 +275,28 @@ const Dashboard = () => {
         page++;
       }
 
-      // Process data for last 7 days
-      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const today = new Date();
-      const last7Days = [];
-
-      // Get last 7 days starting from today
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-        date.setHours(0, 0, 0, 0);
-        
-        const nextDate = new Date(date);
-        nextDate.setDate(nextDate.getDate() + 1);
-        
-        last7Days.push({
-          day: daysOfWeek[date.getDay()],
-          date: date,
-          nextDate: nextDate,
-          assessments: 0,
-          completions: 0
-        });
-      }
-
       // Count assessments created per day
       candidatesData.forEach((item) => {
         try {
           const parsed = typeof item === "string" ? JSON.parse(item) : item;
-          if (parsed.updatedAt) {
+          if (parsed.updatedAt && parsed.asnT && Array.isArray(parsed.asnT)) {
             let dateStr = parsed.updatedAt;
-            if (typeof dateStr === 'object' && dateStr.$date) {
+            if (typeof dateStr === "object" && dateStr.$date) {
               dateStr = dateStr.$date;
             }
             const itemDate = new Date(dateStr);
             itemDate.setHours(0, 0, 0, 0);
 
-            last7Days.forEach(day => {
+            const testNames = parsed.asnT
+              .map((test) => test.title)
+              .sort()
+              .join(", ");
+            const assessmentTitle = parsed.assT || "Untitled Assessment";
+            const assessmentKey = `${assessmentTitle}_${testNames}`;
+
+            last7Days.forEach((day) => {
               if (itemDate >= day.date && itemDate < day.nextDate) {
-                day.assessments++;
+                day.uniqueAssessments.add(assessmentKey);
               }
             });
           }
@@ -241,33 +305,44 @@ const Dashboard = () => {
         }
       });
 
+      // Set assessments count to unique assessments size
+      last7Days.forEach((day) => {
+        day.assessments = day.uniqueAssessments.size;
+      });
+
       // Count completions per day
       resultsData.forEach((item) => {
         try {
-          if (item.testHistory && Array.isArray(item.testHistory)) {
-            item.testHistory.forEach(test => {
-              if (test.date) {
-                const cleanDateStr = test.date.replace("IST", "").trim();
-                const itemDate = new Date(cleanDateStr);
-                itemDate.setHours(0, 0, 0, 0);
+          if (item.assT) {
+            // Check for top-level timestamp or completedAt
+            let dateStr = item.completedAt || item.timestamp || null;
 
-                last7Days.forEach(day => {
-                  if (itemDate >= day.date && itemDate < day.nextDate) {
-                    day.completions++;
-                  }
-                });
-              }
-            });
+            // Fallback to testHistory date only if assT doesn’t have its own timestamp
+            if (!dateStr && item.testHistory && item.testHistory[0]?.date) {
+              dateStr = item.testHistory[0].date;
+            }
+
+            if (dateStr) {
+              const cleanDateStr = String(dateStr).replace("IST", "").trim();
+              const itemDate = new Date(cleanDateStr);
+              itemDate.setHours(0, 0, 0, 0);
+
+              last7Days.forEach((day) => {
+                if (itemDate >= day.date && itemDate < day.nextDate) {
+                  day.completions++; // Count one completion per assT
+                }
+              });
+            }
           }
         } catch (error) {
           console.error("Error processing result data:", error);
         }
       });
-
-      setDailyChartData(last7Days);
     } catch (err) {
       console.error("Failed to fetch daily assessment activity:", err);
     }
+
+    setDailyChartData(last7Days);
   };
 
   const fetchRecentResults = async () => {
@@ -317,33 +392,33 @@ const Dashboard = () => {
           item.testHistory.length > 0
       );
 
-  const recent = filteredData.slice(0, 5).map((item) => {
-  const candidateName = item.personalInformation?.name || item.name || "Unknown";
-  
-  // Use top-level score instead of testHistory score
-  const scoreValue = parseInt(item.score) || 0;
+      const recent = filteredData.slice(0, 5).map((item) => {
+        const candidateName =
+          item.personalInformation?.name || item.name || "Unknown";
 
-  return {
-    name: candidateName,
-    test: item.assT || "Untitled Assessment", // Use assT instead of testName
-    score: `${scoreValue}`,
-    initials: candidateName
-      .split(" ")
-      .map((w) => w[0])
-      .join("")
-      .toUpperCase(),
-    color:
-      scoreValue >= 90
-        ? "bg-green-100 text-green-800"
-        : scoreValue >= 75
-        ? "bg-blue-100 text-blue-800"
-        : "bg-yellow-100 text-yellow-800",
-    time: item.testHistory?.[0]?.date
-      ? formatTimeAgo(item.testHistory[0].date)
-      : "Recently",
-  };
-});
+        // Use top-level score instead of testHistory score
+        const scoreValue = parseInt(item.score) || 0;
 
+        return {
+          name: candidateName,
+          test: item.assT || "Untitled Assessment", // Use assT instead of testName
+          score: `${scoreValue}`,
+          initials: candidateName
+            .split(" ")
+            .map((w) => w[0])
+            .join("")
+            .toUpperCase(),
+          color:
+            scoreValue >= 90
+              ? "bg-green-100 text-green-800"
+              : scoreValue >= 75
+              ? "bg-blue-100 text-blue-800"
+              : "bg-yellow-100 text-yellow-800",
+          time: item.testHistory?.[0]?.date
+            ? formatTimeAgo(item.testHistory[0].date)
+            : "Recently",
+        };
+      });
 
       setRecentResults(recent);
     } catch (err) {
@@ -351,16 +426,89 @@ const Dashboard = () => {
     }
   };
 
+  const fetchTotalCandidatesDistinct = async () => {
+    const token = getToken();
+    try {
+      let allEmails = new Set();
+      let page = 1;
+      const limit = 100;
+
+      while (true) {
+        const response = await fetch(
+          `${BaseUrl}/auth/retrievecollection?distinct_field=email&ColName=${uid}_Candidates&page=${page}&limit=${limit}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              xxxid: uid,
+            },
+          }
+        );
+
+        const data = await response.json();
+        if (data?.source && Array.isArray(data.source)) {
+          data.source.forEach(email => allEmails.add(email));
+          if (data.source.length < limit) break;
+        } else {
+          break;
+        }
+        page++;
+      }
+
+      setTotalCandidates(allEmails.size.toLocaleString());
+    } catch (err) {
+      console.error("Failed to fetch total candidates:", err);
+      setTotalCandidates("0");
+    }
+  };
+
+  const fetchDashboardStats = async () => {
+    try {
+      const response = await fetch(`${BaseUrl}/getD`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          xxxid: uid,
+        },
+      });
+      const data = await response.json();
+      if (data["Average Score (Last 6 Months)"] !== undefined) {
+        setAverageScore(data["Average Score (Last 6 Months)"].toString());
+      }
+      if (data["Top Performers (Last 6 Months)"]) {
+        setTopPerformers(data["Top Performers (Last 6 Months)"].length.toString());
+      }
+    } catch (err) {
+      console.error("Failed to fetch dashboard stats:", err);
+      setAverageScore("0");
+      setTopPerformers("0");
+    }
+  };
+
   useEffect(() => {
     if (fetchCalled.current) return;
     fetchCalled.current = true;
 
-    fetchTotalCandidates(setTotalCandidates, setLoading); // ✅ pass state setters
+    fetchTotalCandidatesDistinct();
     fetchInvitedCandidates();
     fetchActiveAssessments();
+    fetchTotalResults();
     fetchDailyAssessmentActivity();
     fetchRecentResults();
+    fetchDashboardStats();
   }, []);
+
+  useEffect(() => {
+    const assigned = parseInt(activeAssessments) || 0;
+    const results = totalResults;
+    if (assigned > 0) {
+      const rate = (results / assigned) * 100;
+      setCompletionRate(`${rate.toFixed(1)}%`);
+    } else {
+      setCompletionRate("0%");
+    }
+  }, [activeAssessments, totalResults]);
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -403,34 +551,34 @@ const Dashboard = () => {
             iconColor: "bg-purple-50 text-purple-600",
             change: t("active"),
             changeColor: "bg-blue-100 text-blue-600",
-           svg: <FaClipboardList size={24} /> // React Icon
+            svg: <FaClipboardList size={24} />, // React Icon
           },
           {
             title: t("completionRate"),
-            value: "82.5%",
+            value: loading ? t("loading") : completionRate,
             desc: t("averageCompletion"),
             iconColor: "bg-orange-50 text-orange-600",
             change: "+5.2%",
             changeColor: "bg-green-100 text-green-600",
-             svg: <FaChartLine size={24} /> // React Icon
+            svg: <FaChartLine size={24} />, // React Icon
           },
           {
             title: t("averageScore"),
-            value: "78.3%",
-            desc: t("acrossAllAssessments"),
+            value: loading ? t("loading") : `${averageScore}%`,
+            desc: t("Across all assessments"),
             iconColor: "bg-indigo-50 text-indigo-600",
             change: "+3.2%",
             changeColor: "bg-green-100 text-green-600",
-          svg: <FaChartBar size={24} />
+            svg: <FaChartBar size={24} />,
           },
           {
             title: t("topPerformers"),
-            value: "156",
-            desc: t("scoreGreaterThan90"),
+            value: loading ? t("loading") : topPerformers,
+            desc: t("Score > 90%"),
             iconColor: "bg-yellow-50 text-yellow-600",
             change: "+15%",
             changeColor: "bg-green-100 text-green-600",
-          svg: <FaTrophy size={24} />
+            svg: <FaTrophy size={24} />,
           },
         ].map((stat, index) => (
           <div
@@ -470,58 +618,57 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column - Recent Activity */}
-    {/* Left Column - Recent Activity */}
-<div className="lg:col-span-2">
-  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-    <h3 className="text-lg font-semibold text-gray-900 mb-6">
-      {t("recentAssessmentActivity")}
-    </h3>
-    <div
-      className="space-y-2 max-h-[320px] overflow-y-auto" // scrollable container
-    >
-      {recentResults.length > 0 ? (
-        recentResults.map((item, index) => (
-          <div
-            key={index}
-            className="flex flex-col sm:flex-row items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            <div className="flex items-center space-x-4 mb-2 sm:mb-0">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-medium text-sm">
-                  {item.initials}
-                </span>
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">{item.name}</p>
-                <p className="text-sm text-gray-600">{item.test}</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <div
-                className={`inline-flex items-center px-2 py-1 rounded-full text-sm font-medium ${item.color}`}
-              >
-                {item.score}
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {item.time.replace("hours ago", t("hoursAgo"))}
-              </p>
+        {/* Left Column - Recent Activity */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">
+              {t("recentAssessmentActivity")}
+            </h3>
+            <div
+              className="space-y-2 max-h-[320px] overflow-y-auto" // scrollable container
+            >
+              {recentResults.length > 0 ? (
+                recentResults.map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex flex-col sm:flex-row items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-4 mb-2 sm:mb-0">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 font-medium text-sm">
+                          {item.initials}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{item.name}</p>
+                        <p className="text-sm text-gray-600">{item.test}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-sm font-medium ${item.color}`}
+                      >
+                        {item.score}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {item.time.replace("hours ago", t("hoursAgo"))}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 text-center">
+                  {t("noRecentActivity")}
+                </p>
+              )}
             </div>
           </div>
-        ))
-      ) : (
-        <p className="text-gray-500 text-center">
-          {t("noRecentActivity")}
-        </p>
-      )}
-    </div>
-  </div>
-</div>
-
+        </div>
 
         {/* Right Column - Quick Actions */}
         <div className="space-y-6">
           {/* Skills Overview */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          {/* <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">
               {t("skillsAssessmentOverview")}
             </h3>
@@ -564,7 +711,7 @@ const Dashboard = () => {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
 
           {/* Quick Actions */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -578,12 +725,14 @@ const Dashboard = () => {
               >
                 {t("inviteCandidates")}
               </button>
-              <button
-                onClick={() => navigate("/test-library")}
-                className="w-full flex items-center space-x-3 p-3 text-left bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
-              >
-                {t("createNewTest")}
-              </button>
+               {userRole !== "3" && userRole !== 3 && (
+                <button
+                  onClick={() => navigate("/test-library")}
+                  className="w-full flex items-center space-x-3 p-3 text-left bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                >
+                  {t("createNewTest")}
+                </button>
+              )}
 
               <button
                 onClick={() => navigate("/reports")}
@@ -633,11 +782,13 @@ const Dashboard = () => {
               {/* Bars & Labels */}
               {dailyChartData.map((dayData, index) => {
                 const maxValue = Math.max(
-                  ...dailyChartData.map(d => Math.max(d.assessments, d.completions)),
+                  ...dailyChartData.map((d) =>
+                    Math.max(d.assessments, d.completions)
+                  ),
                   1
                 );
-                
-                const x = 70 + (index * 80);
+
+                const x = 70 + index * 80;
                 const assessmentHeight = (dayData.assessments / maxValue) * 150;
                 const completionHeight = (dayData.completions / maxValue) * 150;
                 const assessmentY = 200 - assessmentHeight;
@@ -646,29 +797,33 @@ const Dashboard = () => {
                 return (
                   <g key={index}>
                     {/* Blue bar - Assessments */}
-                    <rect
-                      x={x}
-                      y={assessmentY}
-                      width="30"
-                      height={assessmentHeight}
-                      fill="#3B82F6"
-                      rx="4"
-                      className="transition-all duration-300 hover:opacity-80 cursor-pointer"
-                    >
-                      <title>{`Assessments: ${dayData.assessments}`}</title>
-                    </rect>
+                    {assessmentHeight > 0 && (
+                      <rect
+                        x={x}
+                        y={assessmentY}
+                        width="30"
+                        height={assessmentHeight}
+                        fill="#3B82F6"
+                        rx="4"
+                        className="transition-all duration-300 hover:opacity-80 cursor-pointer"
+                      >
+                        <title>{`Assessments: ${dayData.assessments}`}</title>
+                      </rect>
+                    )}
                     {/* Green bar - Completions */}
-                    <rect
-                      x={x + 35}
-                      y={completionY}
-                      width="30"
-                      height={completionHeight}
-                      fill="#10B981"
-                      rx="4"
-                      className="transition-all duration-300 hover:opacity-80 cursor-pointer"
-                    >
-                      <title>{`Completions: ${dayData.completions}`}</title>
-                    </rect>
+                    {completionHeight > 0 && (
+                      <rect
+                        x={x + 35}
+                        y={completionY}
+                        width="30"
+                        height={completionHeight}
+                        fill="#10B981"
+                        rx="4"
+                        className="transition-all duration-300 hover:opacity-80 cursor-pointer"
+                      >
+                        <title>{`Completions: ${dayData.completions}`}</title>
+                      </rect>
+                    )}
                     {/* Day label */}
                     <text
                       x={x + 30}

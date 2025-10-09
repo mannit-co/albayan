@@ -7,7 +7,7 @@ import {
   FiTrendingUp,
 } from "react-icons/fi";
 import { FaCheckCircle, FaMedal } from "react-icons/fa";
-import { fetchTotalCandidates, BaseUrl, uid } from "../../Api/Api"; // 👈 import your API function
+import { BaseUrl, uid } from "../../Api/Api";
 import { useLanguage } from "../../contexts/LanguageContext";
 //  Recharts imports
 import {
@@ -28,7 +28,7 @@ import TestPerformance from "./TestPerformance";
 import TimeBasedTrends from "./TimeBasedTrends";
 
 //  Colors for each segment
-const COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#9CA3AF"]; // Green, Blue, Orange, Gray
+const COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#E75480"]; // Green, Blue, Orange, Gray
 
 const Reports = () => {
   const { t } = useLanguage();
@@ -41,6 +41,9 @@ const Reports = () => {
   const [apiData, setApiData] = useState(null);
   const [pieData, setPieData] = useState([]);
   const [monthlyData, setMonthlyData] = useState([]);
+  const [averageCompletion, setAverageCompletion] = useState("0");
+  const [averageScore, setAverageScore] = useState("0");
+  const [topPerformers, setTopPerformers] = useState("0");
 
   // Retrieve token from sessionStorage
   const getToken = () => {
@@ -57,6 +60,32 @@ const Reports = () => {
       console.error("Token not found");
     }
     return token;
+  };
+
+  // Fetch average score and top performers
+  const fetchAverageAndTop = async () => {
+    try {
+      const response = await fetch(
+        `${BaseUrl}/getD`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            xxxid: uid,
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data["Average Score (Last 6 Months)"] !== undefined) {
+        setAverageScore(data["Average Score (Last 6 Months)"].toString());
+      }
+      if (data["Top Performers (Last 6 Months)"]) {
+        setTopPerformers(data["Top Performers (Last 6 Months)"].length.toString());
+      }
+    } catch (err) {
+      console.error("Failed to fetch average and top performers:", err);
+    }
   };
 
   // Fetch analytics data from API
@@ -88,10 +117,10 @@ const Reports = () => {
       if (data.performanceDistribution) {
         const perfDist = data.performanceDistribution;
         const newPieData = [
-          { name: t('excellent'), value: perfDist["Excellent (90-100%)"] || 0 },
-          { name: t('good'), value: perfDist["Good (80-89%)"] || 0 },
           { name: t('average'), value: perfDist["Average (70-79%)"] || 0 },
           { name: t('belowAverage'), value: perfDist["Below Average (<70%)"] || 0 },
+          { name: t('excellent'), value: perfDist["Excellent (90-100%)"] || 0 },
+          { name: t('good'), value: perfDist["Good (80-89%)"] || 0 },
         ];
         setPieData(newPieData);
       }
@@ -116,8 +145,58 @@ const Reports = () => {
         
         setMonthlyData(last6Months);
       }
+
+      // Calculate average completion rate
+      if (data.testPerformanceOverview) {
+        let totalAssigned = 0;
+        let totalCompleted = 0;
+        data.testPerformanceOverview.forEach(test => {
+          totalAssigned += test.Participants;
+          totalCompleted += (test.CompletionRate / 100) * test.Participants;
+        });
+        const avgCompletion = totalAssigned > 0 ? (totalCompleted / totalAssigned) * 100 : 0;
+        setAverageCompletion(avgCompletion.toFixed(1));
+      }
     } catch (err) {
       console.error("Failed to fetch analytics data:", err);
+    }
+  };
+
+  // Fetch total candidates with distinct emails
+  const fetchTotalCandidatesDistinct = async () => {
+    const token = getToken();
+    try {
+      let allEmails = new Set();
+      let page = 1;
+      const limit = 100;
+
+      while (true) {
+        const response = await fetch(
+          `${BaseUrl}/auth/retrievecollection?distinct_field=email&ColName=${uid}_Candidates&page=${page}&limit=${limit}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              xxxid: uid,
+            },
+          }
+        );
+
+        const data = await response.json();
+        if (data?.source && Array.isArray(data.source)) {
+          data.source.forEach(email => allEmails.add(email));
+          if (data.source.length < limit) break;
+        } else {
+          break;
+        }
+        page++;
+      }
+
+      setTotalCandidates(allEmails.size.toString());
+    } catch (err) {
+      console.error("Failed to fetch total candidates:", err);
+      setTotalCandidates("0");
     }
   };
 
@@ -171,9 +250,10 @@ const Reports = () => {
   };
 
   useEffect(() => {
-    fetchTotalCandidates(setTotalCandidates, setLoading);
+    fetchTotalCandidatesDistinct();
     fetchCompletedTests();
     fetchAnalyticsData(selectedDays);
+    fetchAverageAndTop();
   }, []);
 
   useEffect(() => {
@@ -203,10 +283,10 @@ const Reports = () => {
               <option value="90d">{t('last90Days')}</option>
               <option value="1y">{t('lastYear')}</option>
             </select>
-            <button className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm">
+            {/* <button className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm">
               <FiDownload size={16} />
               <span>{t('export')}</span>
-            </button>
+            </button> */}
           </div>
         </div>
       </div>
@@ -326,13 +406,13 @@ const Reports = () => {
                 </span>
               </div>
               <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
-                82.5%
+                {loading ? "Loading..." : `${averageScore}%`}
               </h3>
               <p className="text-gray-600 font-medium text-sm sm:text-base">
-                {t("averageScore","Average Score")}
+                {t("averageScore")}
               </p>
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                {t("acrossalltestes" )}
+                {t("Across all test")}
               </p>
             </div>
 
@@ -347,13 +427,13 @@ const Reports = () => {
                 </span>
               </div>
               <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
-                156
+                {loading ? "Loading..." : topPerformers}
               </h3>
               <p className="text-gray-600 font-medium text-sm sm:text-base">
                 {t("topPerformers", "Top Performers")}
               </p>
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                {t("score")} &gt; 90%
+                {t("Score > 90%")}
               </p>
             </div>
           </div>
@@ -433,7 +513,7 @@ const Reports = () => {
                         <span className="text-xs sm:text-sm text-gray-700 font-medium">
                           {value}{" "}
                           <span className="text-gray-900 font-bold">
-                            {pieData[index].value}%
+                            {entry.value}%
                           </span>
                         </span>
                       )}

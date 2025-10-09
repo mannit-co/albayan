@@ -25,6 +25,7 @@ const AssessmentLibrary = () => {
   const [userId, setUserId] = useState(null);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [userRole, setUserRole] = useState(null);
 
   // Data states
   const [candidates, setCandidates] = useState([]);
@@ -66,9 +67,14 @@ const AssessmentLibrary = () => {
         const sourceObj = JSON.parse(parsedData.source);
         setToken(sourceObj.token);
         setUserId(sourceObj._id?.$oid || sourceObj._id || null);
-        // ✅ Extract firstName and lastName
+        // ✅ Extract firstName, lastName, and role
         setFirstName(sourceObj.firstName || "");
         setLastName(sourceObj.lastName || "");
+        setUserRole(sourceObj.role || null);
+
+        console.log("Login Response:", parsedData)
+        console.log("User Role:", sourceObj.role)
+        console.log("FirstName", "Last Name", sourceObj.firstName, sourceObj.lastName)
       }
     }
   }, []);
@@ -178,10 +184,36 @@ const AssessmentLibrary = () => {
           difficulty: parsed.diff || parsed.difficulty || "Medium",
           category: parsed.cat || parsed.category || "General",
           qs: parsed.qs || [], // Keep the full questions array
+          hrname: parsed.hrname || [], // Keep the hrname array for filtering
         };
       });
 
-      setTests(normalizedTests);
+      // Filter tests based on user role
+      let filteredTests = normalizedTests;
+      
+      // If user role is "3" (HR), filter tests assigned to this HR
+      if (userRole === "3" || userRole === 3) {
+        const currentHRName = `${firstName} ${lastName}`;
+        console.log("Current HR Name for filtering:", currentHRName);
+        
+        filteredTests = normalizedTests.filter(test => {
+          // Check if hrname exists and contains the current HR's name
+          if (test.hrname && Array.isArray(test.hrname)) {
+            const isAssignedToHR = test.hrname.includes(currentHRName);
+            console.log(`Test "${test.title}" - HR Names:`, test.hrname, "Assigned to current HR:", isAssignedToHR);
+            return isAssignedToHR;
+          }
+          // If no hrname field, don't show the test for HR users
+          console.log(`Test "${test.title}" - No hrname field, hiding from HR`);
+          return false;
+        });
+        
+        console.log(`Filtered ${filteredTests.length} tests for HR: ${currentHRName}`);
+      } else {
+        console.log("User is not HR (role 3), showing all tests");
+      }
+
+      setTests(filteredTests);
     } catch (error) {
       console.error("Error fetching tests:", error);
       toast.error(`${t("failedtoloadtest")}`);
@@ -218,7 +250,7 @@ const AssessmentLibrary = () => {
         hasFetchedRef.current = false;
       }
     };
-  }, [token, userId]);
+  }, [token, userId, userRole, firstName, lastName]); // Added userRole, firstName, lastName to dependencies
 
   // Reset form data when component mounts or when showAssessmentList changes
   useEffect(() => {

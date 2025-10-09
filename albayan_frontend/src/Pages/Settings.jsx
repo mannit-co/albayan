@@ -478,27 +478,38 @@ const Settings = () => {
                   </tr>
                 ))}
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {table.getRowModel().rows.map((row, rowIndex) => (
-                  <tr
-                    key={row.id}
-                    className={`transition-all duration-200 hover:bg-blue-50 ${
-                      rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
-                    }`}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                      >
-                        {cell.column.columnDef.cell
-                          ? cell.column.columnDef.cell(cell)
-                          : cell.getValue()}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
+      <tbody className="bg-white divide-y divide-gray-200">
+        {/* Check if no rows exist and display "No Test Available" */}
+        {table.getRowModel().rows.length === 0 ? (
+          <tr>
+            <td
+              colSpan={table.getHeaderGroups()[0].headers.length} // Span across all columns
+              className="px-6 py-4 text-center text-sm text-gray-500"
+            >
+              No Test Available
+            </td>
+          </tr>
+        ) : (
+          table.getRowModel().rows.map((row, rowIndex) => (
+            <tr
+              key={row.id}
+              className={`transition-all duration-200 hover:bg-blue-50 ${rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
+                }`}
+            >
+              {row.getVisibleCells().map((cell) => (
+                <td
+                  key={cell.id}
+                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                >
+                  {cell.column.columnDef.cell
+                    ? cell.column.columnDef.cell(cell)
+                    : cell.getValue()}
+                </td>
+              ))}
+            </tr>
+          ))
+        )}
+      </tbody>
             </table>
           </div>
         </div>
