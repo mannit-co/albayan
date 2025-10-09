@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { FiBarChart2, FiPieChart } from "react-icons/fi";
 import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { uid,BaseUrl } from "../../Api/Api";
 
 //  Recharts imports
 import {
@@ -18,27 +19,83 @@ import {
   Legend,
 } from "recharts";
 
-const COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#EF4444"];
+const COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#9CA3AF"]; // Green, Blue, Orange, Gray
 
-const TestPerformance = () => {
+const TestPerformance = ({ selectedDays = "7d" }) => {
   const { t } = useLanguage();
-  
-  //  Dummy data with translations
-  const monthlyData = [
-    { name: t('jan'), assessments: 85 },
-    { name: t('feb'), assessments: 92 },
-    { name: t('mar'), assessments: 78 },
-    { name: t('apr'), assessments: 95 },
-    { name: t('may'), assessments: 88 },
-    { name: t('jun'), assessments: 102 },
-  ];
+  const [pieData, setPieData] = useState([]);
+  const [monthlyData, setMonthlyData] = useState([]);
+  const [testPerformanceData, setTestPerformanceData] = useState([]);
 
-  const pieData = [
-    { name: t('excellent'), value: 25 },
-    { name: t('good'), value: 35 },
-    { name: t('average'), value: 28 },
-    { name: t('belowAverage'), value: 12 },
-  ];
+  // Fetch analytics data from API
+  const fetchAnalyticsData = async (days) => {
+    try {
+      const daysMap = {
+        "7d": 7,
+        "30d": 30,
+        "90d": 90,
+        "1y": 365
+      };
+      const dayValue = daysMap[days] || 7;
+      
+      const response = await fetch(
+        `${BaseUrl}/getd?day=${dayValue}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            xxxid: uid,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      // Process performance distribution for pie chart
+      if (data.performanceDistribution) {
+        const perfDist = data.performanceDistribution;
+        const newPieData = [
+          { name: t('excellent'), value: perfDist["Excellent (90-100%)"] || 0 },
+          { name: t('good'), value: perfDist["Good (80-89%)"] || 0 },
+          { name: t('average'), value: perfDist["Average (70-79%)"] || 0 },
+          { name: t('belowAverage'), value: perfDist["Below Average (<70%)"] || 0 },
+        ];
+        setPieData(newPieData);
+      }
+
+      // Process monthly assessment activity for bar chart (last 6 months)
+      if (data.monthlyAssessmentActivity) {
+        const monthlyActivity = data.monthlyAssessmentActivity;
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const currentMonth = new Date().getMonth();
+        
+        const last6Months = [];
+        for (let i = 5; i >= 0; i--) {
+          const monthIndex = (currentMonth - i + 12) % 12;
+          const monthName = monthNames[monthIndex];
+          const monthKey = monthName.toUpperCase();
+          
+          last6Months.push({
+            name: t(monthName.toLowerCase()),
+            assessments: monthlyActivity[monthKey] || 0
+          });
+        }
+        
+        setMonthlyData(last6Months);
+      }
+
+      // Process test performance overview
+      if (data.testPerformanceOverview) {
+        setTestPerformanceData(data.testPerformanceOverview);
+      }
+    } catch (err) {
+      console.error("Failed to fetch analytics data:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnalyticsData(selectedDays);
+  }, [selectedDays]);
   return (
     <div className="space-y-6">
       {/* Row with Bar & Pie */}
@@ -151,71 +208,51 @@ const TestPerformance = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              <tr className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">
-                    JavaScript Fundamentals
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  45
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  82%
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  89%
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                    {t('medium')}
-                  </span>
-                </td>
-              </tr>
+              {testPerformanceData.length > 0 ? (
+                testPerformanceData.map((test, index) => {
+                  const difficulty = test.Difficulty;
+                  let difficultyLabel = t('medium');
+                  let difficultyColor = 'bg-yellow-100 text-yellow-800';
+                  
+                  if (difficulty < 50) {
+                    difficultyLabel = t('easy');
+                    difficultyColor = 'bg-green-100 text-green-800';
+                  } else if (difficulty > 75) {
+                    difficultyLabel = t('hard');
+                    difficultyColor = 'bg-red-100 text-red-800';
+                  }
 
-              <tr className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">
-                    React Development
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  32
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  78%
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  76%
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                    {t('hard')}
-                  </span>
-                </td>
-              </tr>
-
-              <tr className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">
-                    CSS &amp; HTML Basics
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  67
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  91%
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  94%
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                    {t('easy')}
-                  </span>
-                </td>
-              </tr>
+                  return (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {test.testName || test._id}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {test.Participants}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {test.AverageScore.toFixed(1)}%
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {test.CompletionRate}%
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${difficultyColor}`}>
+                          {difficultyLabel}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                    {t('noDataAvailable', 'No data available')}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

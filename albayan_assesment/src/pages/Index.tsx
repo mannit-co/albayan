@@ -583,17 +583,26 @@
                 <div className="p-8">
                   {/* Completed Tests */}
                   <div className="text-center space-y-6">
-                    <h3 className="text-xl font-medium text-gray-900">Completed Tests</h3>
-                    <div className="flex flex-wrap justify-center gap-3">
-                      {tests.filter(test => test.completed).map((test, index) => (
-                        <span key={test.tid || index} className="px-5 py-3 text-sm rounded-full bg-green-100 text-green-700 border border-green-300 font-medium">
-                          {test.title} - Completed
-                        </span>
-                      ))}
-                    </div>
-                    <p className="text-gray-600 text-lg">
-                      All assessments have been successfully completed and submitted.
-                    </p>
+                    {tests && tests.length > 0 ? (
+                      <>
+                        <h3 className="text-xl font-medium text-gray-900">Completed Tests</h3>
+                        <div className="flex flex-wrap justify-center gap-3">
+                          {tests.filter(test => test.completed).map((test, index) => (
+                            <span key={test.tid || index} className="px-5 py-3 text-sm rounded-full bg-green-100 text-green-700 border border-green-300 font-medium">
+                              {test.title} - Completed
+                            </span>
+                          ))}
+                        </div>
+                        <p className="text-gray-600 text-lg">
+                          All tests have been successfully completed and submitted.
+                        </p>
+                      </>
+                    ) : (
+                      // Just show success message when tests array is empty (after refresh)
+                      <p className="text-gray-600 text-lg">
+                        All tests have been successfully completed and submitted.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

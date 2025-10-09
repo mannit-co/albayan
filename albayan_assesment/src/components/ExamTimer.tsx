@@ -45,8 +45,8 @@ export const ExamTimer: React.FC<ExamTimerProps> = ({ duration, onTimeUp }) => {
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
   const getTimerClass = () => {
-    if (timeLeft <= 300) return 'bg-gray text-black border-2 border-red-500 px-4 py-2 rounded-lg font-mono font-bold text-lg shadow-lg'; // Last 5 minutes - white bg with red border
-    if (timeLeft <= 600) return 'bg-gray text-black border-2 border-orange-500 px-4 py-2 rounded-lg font-mono font-bold text-lg shadow-lg'; // Last 10 minutes - white bg with orange border
+    if (timeLeft <= 300) return 'bg-white text-black border-2 border-red-500 px-4 py-2 rounded-lg font-mono font-bold text-lg shadow-lg'; // Last 5 minutes - white bg with red border
+    if (timeLeft <= 600) return 'bg-white text-black border-2 border-orange-500 px-4 py-2 rounded-lg font-mono font-bold text-lg shadow-lg'; // Last 10 minutes - white bg with orange border
     return 'bg-white text-black border-2 border-gray-300 px-4 py-2 rounded-lg font-mono font-bold text-lg shadow-lg'; // Normal - white background with black text
   };
 

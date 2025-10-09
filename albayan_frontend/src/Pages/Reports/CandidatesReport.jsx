@@ -9,8 +9,8 @@ const CandidatesReport = () => {
   const { t } = useLanguage();
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [availableTests, setAvailableTests] = useState([]);
-  const [selectedTest, setSelectedTest] = useState("all");
+  const [availableAssessments, setAvailableAssessments] = useState([]);
+  const [selectedAssessment, setSelectedAssessment] = useState("all");
   const [candidates, setCandidates] = useState([]);
   const [testHistory, setTestHistory] = useState([]);
 
@@ -32,7 +32,7 @@ const CandidatesReport = () => {
     return token;
   };
   useEffect(() => {
-    const fetchAvailableTests = async () => {
+    const fetchAvailableAssessments = async () => {
       const token = getToken();
       if (!token) return;
 
@@ -43,7 +43,7 @@ const CandidatesReport = () => {
 
         while (true) {
           const response = await fetch(
-            `${BaseUrl}/auth/retrievecollection?ColName=${uid}_TestLibrary&page=${page}&limit=${limit}`,
+            `${BaseUrl}/auth/retrievecollection?ColName=${uid}_Result&page=${page}&limit=${limit}`,
             {
               method: "GET",
               headers: {
@@ -57,7 +57,6 @@ const CandidatesReport = () => {
           const data = await response.json();
 
           if (data?.source && Array.isArray(data.source)) {
-            // data.source contains strings, so we need to parse them
             const parsed = data.source.map((item) => JSON.parse(item));
             allData = allData.concat(parsed);
 
@@ -67,21 +66,28 @@ const CandidatesReport = () => {
           page++;
         }
 
-        // Normalize tests for dropdown
-        const normalizedTests = allData.map((test) => ({
-          id: test.tid,
-          name: test.title || "Unnamed Test",
+        // Extract unique assessment titles from assT field
+        const assessmentSet = new Set();
+        allData.forEach((item) => {
+          if (item.assT) {
+            assessmentSet.add(item.assT);
+          }
+        });
+
+        // Convert to array of objects for dropdown
+        const uniqueAssessments = Array.from(assessmentSet).map((title) => ({
+          name: title,
         }));
 
-        setAvailableTests(normalizedTests);
+        setAvailableAssessments(uniqueAssessments);
       } catch (error) {
-        console.error("Error fetching available tests:", error);
-        toast.error("Failed to load tests");
-        setAvailableTests([]);
+        console.error("Error fetching available assessments:", error);
+        toast.error("Failed to load assessments");
+        setAvailableAssessments([]);
       }
     };
 
-    fetchAvailableTests();
+    fetchAvailableAssessments();
   }, []);
 
   // ✅ Fetch candidates dynamically
@@ -131,10 +137,9 @@ const CandidatesReport = () => {
           )
         .map((c) => {
   const rootScore = c.score ?? c.performanceSummary?.overallScore ?? 0;
-  const lastTestName =
-    (c.testHistory && c.testHistory.length > 0
-      ? c.testHistory[c.testHistory.length - 1].testName
-      : "N/A") || "N/A";
+  
+  // Get assessment title from assT field
+  const assessmentTitle = c.assT || "N/A";
 
   let lastActivity = "N/A";
   if (c.testHistory && c.testHistory.length > 0) {
@@ -154,7 +159,7 @@ const CandidatesReport = () => {
     name: c.name || c.personalInformation?.name || "Unknown",
     email: c.email || c.personalInformation?.email || "N/A",
     phone: c.phone || c.personalInformation?.phone || "N/A",
-    testName: lastTestName,
+    assessmentTitle: assessmentTitle, // Changed from testName to assessmentTitle
     averageScore: `${rootScore}`,
     testHistory: c.testHistory || [], // ✅ ADD THIS LINE
     performance: {
@@ -202,15 +207,27 @@ const CandidatesReport = () => {
     fetchCandidates();
   }, []);
 
-  // ✅ Filter candidates by status
+  // ✅ Filter candidates by status and assessment
   const filteredCandidates = candidates.filter((candidate) => {
-    if (statusFilter === "all") return true;
-    if (statusFilter === "in-progress")
-      return candidate.status.label === "In Progress";
-    return (
-      candidate.status.label ===
-      statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)
-    );
+    // Filter by status
+    let statusMatch = true;
+    if (statusFilter !== "all") {
+      if (statusFilter === "in-progress") {
+        statusMatch = candidate.status.label === "In Progress";
+      } else {
+        statusMatch =
+          candidate.status.label ===
+          statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1);
+      }
+    }
+
+    // Filter by assessment
+    let assessmentMatch = true;
+    if (selectedAssessment !== "all") {
+      assessmentMatch = candidate.assessmentTitle === selectedAssessment;
+    }
+
+    return statusMatch && assessmentMatch;
   });
 
   // 🔽 Helper: Download Report (EN or AR)
@@ -333,16 +350,16 @@ const CandidatesReport = () => {
             </select>
           </div>
 
-          {/* Dynamic Tests Dropdown */}
+          {/* Dynamic Assessments Dropdown */}
           <select
-            value={selectedTest}
-            onChange={(e) => setSelectedTest(e.target.value)}
+            value={selectedAssessment}
+            onChange={(e) => setSelectedAssessment(e.target.value)}
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value="all">{t("allTests")}</option>
-            {availableTests.map((test) => (
-              <option key={test.id} value={test.name}>
-                {test.name}
+            <option value="all">{t("allassessment", "All Assessments")}</option>
+            {availableAssessments.map((assessment, index) => (
+              <option key={index} value={assessment.name}>
+                {assessment.name}
               </option>
             ))}
           </select>
@@ -394,7 +411,7 @@ const CandidatesReport = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {candidate.testName}
+                    {candidate.assessmentTitle}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {candidate.averageScore}

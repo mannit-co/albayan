@@ -52,13 +52,13 @@ export const ExamDashboard: React.FC<ExamDashboardProps> = ({
     getStatusCounts
   } = useExamState(questions);
 
-  // const {
-  //   isFullscreen,
-  //   violations,
-  //   requestFullscreen,
-  //   exitFullscreen,
-  //   clearViolations
-  // } = useExamSecurity();
+  const {
+    isFullscreen,
+    violations,
+    requestFullscreen,
+    exitFullscreen,
+    clearViolations
+  } = useExamSecurity();
 
   // Track per-question time
   const timeSpentRef = useRef<number[]>(Array(questions.length).fill(0));
@@ -90,39 +90,20 @@ export const ExamDashboard: React.FC<ExamDashboardProps> = ({
     switch (question.type) {
       case 'True/False':
       case 'Yes/No':
-        // For boolean questions, check if response is not null/undefined
-        return response !== null && response !== undefined && response !== '';
-
       case 'SingleSelect':
       case 'MultipleSelect':
       case 'Image':
-        // For selection questions, check if response is not empty
-        if (Array.isArray(response)) {
-          return response.length > 0 && response[0] !== null && response[0] !== undefined && response[0] !== '';
-        }
         return response !== null && response !== undefined && response !== '';
 
       case 'Essay':
       case 'Coding':
       case 'Fillup':
-        // For text-based questions, check if response has content
-        if (Array.isArray(response)) {
-          return response.length > 0 && response[0] && response[0].toString().trim().length > 0;
-        }
         return response && response.toString().trim().length > 0;
 
       case 'Disc':
-        // For DISC questions, check if response is selected
-        if (Array.isArray(response)) {
-          return response.length > 0 && response[0] !== null && response[0] !== undefined && response[0] !== '';
-        }
         return response !== null && response !== undefined && response !== '';
 
       default:
-        // For any other type, check if response exists
-        if (Array.isArray(response)) {
-          return response.length > 0 && response[0] !== null && response[0] !== undefined && response[0] !== '';
-        }
         return response !== null && response !== undefined && response !== '';
     }
   };
@@ -141,16 +122,16 @@ export const ExamDashboard: React.FC<ExamDashboardProps> = ({
   const startExam = async () => {
     try {
       // Try to get camera access, but don’t block if denied
-      // try {
-      //   const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      //   setCameraPermission(true);
-      // } catch {
-      //   setCameraPermission(false);
-      //   console.warn('Camera permission denied — continuing without camera.');
-      // }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setCameraPermission(true);
+      } catch {
+        setCameraPermission(false);
+        console.warn('Camera permission denied — continuing without camera.');
+      }
 
       // // Continue exam even if camera not granted
-      // await requestFullscreen();
+      await requestFullscreen();
       setExamStarted(true);
 
       timeSpentRef.current = Array(questions.length).fill(0);
@@ -243,6 +224,20 @@ export const ExamDashboard: React.FC<ExamDashboardProps> = ({
           selOpt = answer.join(","); // store actual written content
           break;
 
+        case "Disc":
+          // For DISC questions, handle option selection properly
+          selOpt = answer
+            .map((val) => {
+              if (typeof val === 'string' && val.startsWith('Option')) {
+                return val; // Already in correct format
+              }
+              const idx = q.options.indexOf(val);
+              return idx >= 0 ? `Option ${idx + 1}` : "";
+            })
+            .filter(Boolean)
+            .join(",");
+          break;
+
         default: // MCQ
           selOpt = answer
             .map((val) => {
@@ -257,6 +252,9 @@ export const ExamDashboard: React.FC<ExamDashboardProps> = ({
         ? timeSpentRef.current[index]
         : 0;
 
+      // Include question status information for accurate summary counting
+      const qStatus = questionStatus[index] || { visited: false, answered: false, markedForReview: false };
+
       return {
         Tid: q.tid,
         Ttit: q.title,
@@ -265,6 +263,12 @@ export const ExamDashboard: React.FC<ExamDashboardProps> = ({
         Selopt: selOpt,
         TimeTaken: safeTime,
         Skills: q.skills || [],
+        // Add status information for summary counting
+        questionStatus: {
+          visited: qStatus.visited,
+          answered: qStatus.answered,
+          markedForReview: qStatus.markedForReview
+        }
       };
     });
 
@@ -319,6 +323,20 @@ export const ExamDashboard: React.FC<ExamDashboardProps> = ({
             selOpt = answer.join(","); // store actual written content
             break;
 
+          case "Disc":
+            // For DISC questions, handle option selection properly
+            selOpt = answer
+              .map((val) => {
+                if (typeof val === 'string' && val.startsWith('Option')) {
+                  return val; // Already in correct format
+                }
+                const idx = q.options.indexOf(val);
+                return idx >= 0 ? `Option ${idx + 1}` : "";
+              })
+              .filter(Boolean)
+              .join(",");
+            break;
+
           default: // MCQ
             selOpt = answer
               .map((val) => {
@@ -333,6 +351,9 @@ export const ExamDashboard: React.FC<ExamDashboardProps> = ({
           ? timeSpentRef.current[index]
           : 0;
 
+        // Include question status information for accurate summary counting
+        const qStatus = questionStatus[index] || { visited: false, answered: false, markedForReview: false };
+
         return {
           Tid: q.tid,
           Ttit: q.title,
@@ -341,6 +362,12 @@ export const ExamDashboard: React.FC<ExamDashboardProps> = ({
           Selopt: selOpt,
           TimeTaken: safeTime,
           Skills: q.skills || [],
+          // Add status information for summary counting
+          questionStatus: {
+            visited: qStatus.visited,
+            answered: qStatus.answered,
+            markedForReview: qStatus.markedForReview
+          }
         };
       });
 
@@ -424,10 +451,10 @@ export const ExamDashboard: React.FC<ExamDashboardProps> = ({
       sessionStorage.setItem('examCompleted', 'true');
 
       // // ✅ Exit fullscreen after submission
-      // exitFullscreen();
+      exitFullscreen();
 
       // // Clear any pending violations before showing summary
-      // clearViolations();
+      clearViolations();
       setShowSummary(true);
     } catch (error: any) {
       console.error("❌ Error submitting exam:", error);
@@ -507,6 +534,19 @@ export const ExamDashboard: React.FC<ExamDashboardProps> = ({
         case "Fillup":
           selOpt = answer.join(",");
           break;
+        case "Disc":
+          // For DISC questions, handle option selection properly
+          selOpt = answer
+            .map((val) => {
+              if (typeof val === 'string' && val.startsWith('Option')) {
+                return val; // Already in correct format
+              }
+              const idx = q.options?.indexOf(val) || -1;
+              return idx >= 0 ? `Option ${idx + 1}` : "";
+            })
+            .filter(Boolean)
+            .join(",");
+          break;
         default:
           selOpt = answer
             .map((val) => {
@@ -516,6 +556,10 @@ export const ExamDashboard: React.FC<ExamDashboardProps> = ({
             .filter(Boolean)
             .join(",");
       }
+      
+      // Include question status information for accurate summary counting
+      const qStatus = questionStatus[index] || { visited: false, answered: false, markedForReview: false };
+      
       return {
         Tid: q.tid,
         Ttit: q.title,
@@ -524,6 +568,12 @@ export const ExamDashboard: React.FC<ExamDashboardProps> = ({
         Selopt: selOpt,
         TimeTaken: 0,
         Skills: q.skills || [],
+        // Add status information for summary counting
+        questionStatus: {
+          visited: qStatus.visited,
+          answered: qStatus.answered,
+          markedForReview: qStatus.markedForReview
+        }
       };
     });
 
@@ -536,7 +586,7 @@ export const ExamDashboard: React.FC<ExamDashboardProps> = ({
         questionStatus={questionStatus}
         onBack={() => {
           // Clear any lingering alerts (e.g., previous refresh/shortcut warnings)
-          // clearViolations();
+          clearViolations();
           setShowSummary(false);
         }}
         onSubmit={finalSubmit}
@@ -549,7 +599,7 @@ export const ExamDashboard: React.FC<ExamDashboardProps> = ({
   return (
     <div className="exam-container">
       {/* ✅ Security Monitor (re-enter fullscreen on user action/auto-hide) */}
-      {/* <SecurityMonitor violations={violations} onRequestFullscreen={requestFullscreen} isFullscreen={isFullscreen} /> */}
+      <SecurityMonitor violations={violations} onRequestFullscreen={requestFullscreen} isFullscreen={isFullscreen} />
 
       {/* Exam Header */}
       <div className="exam-header">
@@ -570,7 +620,7 @@ export const ExamDashboard: React.FC<ExamDashboardProps> = ({
       </div>
 
       {/* ✅ Camera Preview */}
-      {/* {cameraPermission && <CameraPreview />} */}
+      {cameraPermission && <CameraPreview />}
 
       {/* Main Content */}
       <div className="exam-content flex flex-col lg:flex-row gap-4 p-4 overflow-y-auto">

@@ -653,13 +653,18 @@ export const translations = {
 
     sendmessage :"Send Message", 
     sendmessageto :"Send Message To ",
+    allassessment :"All Assessment",
   },
 
   ar: {
     emailSubject: "موضوع البريد الإلكتروني",
 emailSubjectPlaceholder: "أدخل موضوع البريد الإلكتروني",
     allStatus: "جميع الحالات",
+    sendmessage: "إرسال الرسالة",
+    sendmessageto: "إرسال الرسالة إلى",
+    allassessment: "جميع التقييمات",
 
+    
     minQuestions: "الحد الأدنى من الأسئلة",
     selectedQuestions: "الأسئلة المختارة",
     questionRemoved: "تم حذف السؤال بنجاح.",

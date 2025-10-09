@@ -9,6 +9,8 @@ const Dashboard = () => {
   const [totalCandidates, setTotalCandidates] = useState("0");
   const [invitedCandidates, setInvitedCandidates] = useState("0");
   const [recentResults, setRecentResults] = useState([]);
+  const [activeAssessments, setActiveAssessments] = useState("0");
+  const [dailyChartData, setDailyChartData] = useState([]);
 
   const navigate = useNavigate();
 
@@ -75,6 +77,199 @@ const Dashboard = () => {
 
   // ✅ assuming you store token in localStorage
 
+  const fetchActiveAssessments = async () => {
+    const token = getToken();
+    try {
+      let allData = [];
+      let page = 1;
+      const limit = 100;
+
+      while (true) {
+        const response = await fetch(
+          `${BaseUrl}/auth/retrievecollection?ColName=${uid}_Candidates&page=${page}&limit=${limit}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              xxxid: uid,
+            },
+          }
+        );
+
+        const data = await response.json();
+        if (data?.source && Array.isArray(data.source)) {
+          allData = allData.concat(data.source);
+          if (data.source.length < limit) break;
+        } else {
+          break;
+        }
+        page++;
+      }
+
+      // Process data to extract unique assessments (same logic as AssessmentList)
+      const assessmentMap = new Map();
+
+      allData.forEach((item) => {
+        try {
+          const parsed = typeof item === "string" ? JSON.parse(item) : item;
+          if (parsed.asnT && Array.isArray(parsed.asnT)) {
+            const testNames = parsed.asnT.map(test => test.title).sort().join(', ');
+            const assessmentTitle = parsed.assT || 'Untitled Assessment';
+            const assessmentKey = `${assessmentTitle}_${testNames}`;
+
+            if (!assessmentMap.has(assessmentKey)) {
+              assessmentMap.set(assessmentKey, true);
+            }
+          }
+        } catch (error) {
+          console.error("Error processing candidate data:", error);
+        }
+      });
+
+      // Set the count of unique assessments
+      setActiveAssessments(assessmentMap.size.toString());
+    } catch (err) {
+      console.error("Failed to fetch active assessments:", err);
+      setActiveAssessments("0");
+    }
+  };
+
+  // Fetch daily assessment activity data
+  const fetchDailyAssessmentActivity = async () => {
+    const token = getToken();
+    try {
+      // Fetch assessments created (from Candidates collection)
+      let candidatesData = [];
+      let page = 1;
+      const limit = 100;
+
+      while (true) {
+        const response = await fetch(
+          `${BaseUrl}/auth/retrievecollection?ColName=${uid}_Candidates&page=${page}&limit=${limit}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              xxxid: uid,
+            },
+          }
+        );
+
+        const data = await response.json();
+        if (data?.source && Array.isArray(data.source)) {
+          candidatesData = candidatesData.concat(data.source);
+          if (data.source.length < limit) break;
+        } else {
+          break;
+        }
+        page++;
+      }
+
+      // Fetch completions (from Results collection)
+      let resultsData = [];
+      page = 1;
+
+      while (true) {
+        const response = await fetch(
+          `${BaseUrl}/auth/retrievecollection?ColName=${uid}_Result&page=${page}&limit=${limit}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              xxxid: uid,
+            },
+          }
+        );
+
+        const data = await response.json();
+        if (data?.source && Array.isArray(data.source)) {
+          const parsed = data.source.map((item) => JSON.parse(item));
+          resultsData = resultsData.concat(parsed);
+          if (data.source.length < limit) break;
+        } else {
+          break;
+        }
+        page++;
+      }
+
+      // Process data for last 7 days
+      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const today = new Date();
+      const last7Days = [];
+
+      // Get last 7 days starting from today
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        
+        const nextDate = new Date(date);
+        nextDate.setDate(nextDate.getDate() + 1);
+        
+        last7Days.push({
+          day: daysOfWeek[date.getDay()],
+          date: date,
+          nextDate: nextDate,
+          assessments: 0,
+          completions: 0
+        });
+      }
+
+      // Count assessments created per day
+      candidatesData.forEach((item) => {
+        try {
+          const parsed = typeof item === "string" ? JSON.parse(item) : item;
+          if (parsed.updatedAt) {
+            let dateStr = parsed.updatedAt;
+            if (typeof dateStr === 'object' && dateStr.$date) {
+              dateStr = dateStr.$date;
+            }
+            const itemDate = new Date(dateStr);
+            itemDate.setHours(0, 0, 0, 0);
+
+            last7Days.forEach(day => {
+              if (itemDate >= day.date && itemDate < day.nextDate) {
+                day.assessments++;
+              }
+            });
+          }
+        } catch (error) {
+          console.error("Error processing candidate data:", error);
+        }
+      });
+
+      // Count completions per day
+      resultsData.forEach((item) => {
+        try {
+          if (item.testHistory && Array.isArray(item.testHistory)) {
+            item.testHistory.forEach(test => {
+              if (test.date) {
+                const cleanDateStr = test.date.replace("IST", "").trim();
+                const itemDate = new Date(cleanDateStr);
+                itemDate.setHours(0, 0, 0, 0);
+
+                last7Days.forEach(day => {
+                  if (itemDate >= day.date && itemDate < day.nextDate) {
+                    day.completions++;
+                  }
+                });
+              }
+            });
+          }
+        } catch (error) {
+          console.error("Error processing result data:", error);
+        }
+      });
+
+      setDailyChartData(last7Days);
+    } catch (err) {
+      console.error("Failed to fetch daily assessment activity:", err);
+    }
+  };
+
   const fetchRecentResults = async () => {
     const token = getToken();
     try {
@@ -130,7 +325,7 @@ const Dashboard = () => {
 
   return {
     name: candidateName,
-    test: item.testHistory?.[0]?.testName || "Untitled Test", // keep testName if needed
+    test: item.assT || "Untitled Assessment", // Use assT instead of testName
     score: `${scoreValue}`,
     initials: candidateName
       .split(" ")
@@ -162,6 +357,8 @@ const Dashboard = () => {
 
     fetchTotalCandidates(setTotalCandidates, setLoading); // ✅ pass state setters
     fetchInvitedCandidates();
+    fetchActiveAssessments();
+    fetchDailyAssessmentActivity();
     fetchRecentResults();
   }, []);
 
@@ -201,7 +398,7 @@ const Dashboard = () => {
           },
           {
             title: t("activeAssessments"),
-            value: "156",
+            value: loading ? t("loading") : activeAssessments,
             desc: t("currentlyInProgress"),
             iconColor: "bg-purple-50 text-purple-600",
             change: t("active"),
@@ -434,119 +631,79 @@ const Dashboard = () => {
               ))}
 
               {/* Bars & Labels */}
-              {[
-                {
-                  day: "Mon",
-                  x: 70,
-                  blueY: 89.34,
-                  blueH: 110.65,
-                  greenY: 106.55,
-                  greenH: 93.44,
-                },
-                {
-                  day: "Tue",
-                  x: 150,
-                  blueY: 72.13,
-                  blueH: 127.86,
-                  greenY: 91.8,
-                  greenH: 108.19,
-                },
-                {
-                  day: "Wed",
-                  x: 230,
-                  blueY: 106.55,
-                  blueH: 93.44,
-                  greenY: 121.31,
-                  greenH: 78.68,
-                },
-                {
-                  day: "Thu",
-                  x: 310,
-                  blueY: 50,
-                  blueH: 150,
-                  greenY: 64.75,
-                  greenH: 135.24,
-                },
-                {
-                  day: "Fri",
-                  x: 390,
-                  blueY: 81.96,
-                  blueH: 118.03,
-                  greenY: 99.18,
-                  greenH: 100.81,
-                },
-                {
-                  day: "Sat",
-                  x: 470,
-                  blueY: 143.44,
-                  blueH: 56.55,
-                  greenY: 153.27,
-                  greenH: 46.72,
-                },
-                {
-                  day: "Sun",
-                  x: 550,
-                  blueY: 163.11,
-                  blueH: 36.88,
-                  greenY: 170.49,
-                  greenH: 29.5,
-                },
-              ].map((bar, index) => (
-                <g key={index}>
-                  {/* Blue bar */}
-                  <rect
-                    x={bar.x}
-                    y={bar.blueY}
-                    width="30"
-                    height={bar.blueH}
-                    fill="#3B82F6"
-                    rx="4"
-                    className="transition-all duration-300 hover:opacity-80"
-                  />
-                  {/* Green bar */}
-                  <rect
-                    x={bar.x + 35}
-                    y={bar.greenY}
-                    width="30"
-                    height={bar.greenH}
-                    fill="#10B981"
-                    rx="4"
-                    className="transition-all duration-300 hover:opacity-80"
-                  />
-                  {/* Day label */}
-                  <text
-                    x={bar.x + 30}
-                    y="220"
-                    textAnchor="middle"
-                    className="text-xs fill-gray-600"
-                  >
-                    {bar.day}
-                  </text>
-                </g>
-              ))}
+              {dailyChartData.map((dayData, index) => {
+                const maxValue = Math.max(
+                  ...dailyChartData.map(d => Math.max(d.assessments, d.completions)),
+                  1
+                );
+                
+                const x = 70 + (index * 80);
+                const assessmentHeight = (dayData.assessments / maxValue) * 150;
+                const completionHeight = (dayData.completions / maxValue) * 150;
+                const assessmentY = 200 - assessmentHeight;
+                const completionY = 200 - completionHeight;
+
+                return (
+                  <g key={index}>
+                    {/* Blue bar - Assessments */}
+                    <rect
+                      x={x}
+                      y={assessmentY}
+                      width="30"
+                      height={assessmentHeight}
+                      fill="#3B82F6"
+                      rx="4"
+                      className="transition-all duration-300 hover:opacity-80 cursor-pointer"
+                    >
+                      <title>{`Assessments: ${dayData.assessments}`}</title>
+                    </rect>
+                    {/* Green bar - Completions */}
+                    <rect
+                      x={x + 35}
+                      y={completionY}
+                      width="30"
+                      height={completionHeight}
+                      fill="#10B981"
+                      rx="4"
+                      className="transition-all duration-300 hover:opacity-80 cursor-pointer"
+                    >
+                      <title>{`Completions: ${dayData.completions}`}</title>
+                    </rect>
+                    {/* Day label */}
+                    <text
+                      x={x + 30}
+                      y="220"
+                      textAnchor="middle"
+                      className="text-xs fill-gray-600"
+                    >
+                      {dayData.day}
+                    </text>
+                  </g>
+                );
+              })}
 
               {/* Legend */}
               <g>
                 <rect
-                  x="500"
-                  y="20"
-                  width="15"
-                  height="15"
+                  x="520"
+                  y="10"
+                  width="12"
+                  height="12"
                   fill="#3B82F6"
                   rx="2"
                 />
-                <text x="520" y="32" className="text-sm fill-gray-700">
+                <text x="537" y="20" className="text-xs fill-gray-700">
                   {t("assessments")}
                 </text>
                 <rect
-                  x="500"
-                  y="40"
-                  width="15"
-                  height="15"
+                  x="520"
+                  y="28"
+                  width="12"
+                  height="12"
                   fill="#10B981"
                   rx="2"
                 />
-                <text x="520" y="52" className="text-sm fill-gray-700">
+                <text x="537" y="38" className="text-xs fill-gray-700">
                   {t("completions")}
                 </text>
               </g>

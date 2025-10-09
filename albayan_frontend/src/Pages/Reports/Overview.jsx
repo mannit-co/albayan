@@ -7,7 +7,7 @@ import {
   FiTrendingUp,
 } from "react-icons/fi";
 import { FaCheckCircle, FaMedal } from "react-icons/fa";
-import { fetchTotalCandidates } from "../../Api/Api"; // 👈 import your API function
+import { fetchTotalCandidates, BaseUrl, uid } from "../../Api/Api"; // 👈 import your API function
 import { useLanguage } from "../../contexts/LanguageContext";
 //  Recharts imports
 import {
@@ -28,36 +28,157 @@ import TestPerformance from "./TestPerformance";
 import TimeBasedTrends from "./TimeBasedTrends";
 
 //  Colors for each segment
-const COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#EF4444"];
+const COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#9CA3AF"]; // Green, Blue, Orange, Gray
 
 const Reports = () => {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("overview");
   // 👇 New states
   const [totalCandidates, setTotalCandidates] = useState("0");
+  const [completedTests, setCompletedTests] = useState("0");
   const [loading, setLoading] = useState(false);
-  
-  //  Pie chart data with translations
-  const pieData = [
-    { name: t('excellent'), value: 25 },
-    { name: t('good'), value: 35 },
-    { name: t('average'), value: 28 },
-    { name: t('belowAverage'), value: 12 },
-  ];
-  
-  //  Bar chart data with translated months
-  const monthlyData = [
-    { name: t('jan'), assessments: 85 },
-    { name: t('feb'), assessments: 92 },
-    { name: t('mar'), assessments: 78 },
-    { name: t('apr'), assessments: 95 },
-    { name: t('may'), assessments: 88 },
-    { name: t('jun'), assessments: 102 },
-  ];
+  const [selectedDays, setSelectedDays] = useState("7d");
+  const [apiData, setApiData] = useState(null);
+  const [pieData, setPieData] = useState([]);
+  const [monthlyData, setMonthlyData] = useState([]);
 
-    useEffect(() => {
+  // Retrieve token from sessionStorage
+  const getToken = () => {
+    let token = null;
+    const storedData = sessionStorage.getItem("loginResponse");
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      if (parsedData.source) {
+        const sourceObj = JSON.parse(parsedData.source);
+        token = sourceObj.token;
+      }
+    }
+    if (!token) {
+      console.error("Token not found");
+    }
+    return token;
+  };
+
+  // Fetch analytics data from API
+  const fetchAnalyticsData = async (days) => {
+    try {
+      const daysMap = {
+        "7d": 7,
+        "30d": 30,
+        "90d": 90,
+        "1y": 365
+      };
+      const dayValue = daysMap[days] || 7;
+      
+      const response = await fetch(
+        `${BaseUrl}/getd?day=${dayValue}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            xxxid: uid,
+          },
+        }
+      );
+
+      const data = await response.json();
+      setApiData(data);
+
+      // Process performance distribution for pie chart
+      if (data.performanceDistribution) {
+        const perfDist = data.performanceDistribution;
+        const newPieData = [
+          { name: t('excellent'), value: perfDist["Excellent (90-100%)"] || 0 },
+          { name: t('good'), value: perfDist["Good (80-89%)"] || 0 },
+          { name: t('average'), value: perfDist["Average (70-79%)"] || 0 },
+          { name: t('belowAverage'), value: perfDist["Below Average (<70%)"] || 0 },
+        ];
+        setPieData(newPieData);
+      }
+
+      // Process monthly assessment activity for bar chart (last 6 months)
+      if (data.monthlyAssessmentActivity) {
+        const monthlyActivity = data.monthlyAssessmentActivity;
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const currentMonth = new Date().getMonth(); // 0-11
+        
+        const last6Months = [];
+        for (let i = 5; i >= 0; i--) {
+          const monthIndex = (currentMonth - i + 12) % 12;
+          const monthName = monthNames[monthIndex];
+          const monthKey = monthName.toUpperCase();
+          
+          last6Months.push({
+            name: t(monthName.toLowerCase()),
+            assessments: monthlyActivity[monthKey] || 0
+          });
+        }
+        
+        setMonthlyData(last6Months);
+      }
+    } catch (err) {
+      console.error("Failed to fetch analytics data:", err);
+    }
+  };
+
+  // Fetch completed tests count
+  const fetchCompletedTests = async () => {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      let allData = [];
+      let page = 1;
+      const limit = 100;
+
+      while (true) {
+        const response = await fetch(
+          `${BaseUrl}/auth/retrievecollection?ColName=${uid}_Result&page=${page}&limit=${limit}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              xxxid: uid,
+            },
+          }
+        );
+
+        const data = await response.json();
+        if (data?.source && Array.isArray(data.source)) {
+          const parsed = data.source.map((item) => JSON.parse(item));
+          allData = allData.concat(parsed);
+          if (data.source.length < limit) break;
+        } else {
+          break;
+        }
+        page++;
+      }
+
+      // Count all testHistory entries
+      let testHistoryCount = 0;
+      allData.forEach((item) => {
+        if (item.testHistory && Array.isArray(item.testHistory)) {
+          testHistoryCount += item.testHistory.length;
+        }
+      });
+
+      setCompletedTests(testHistoryCount.toString());
+    } catch (err) {
+      console.error("Failed to fetch completed tests:", err);
+      setCompletedTests("0");
+    }
+  };
+
+  useEffect(() => {
     fetchTotalCandidates(setTotalCandidates, setLoading);
+    fetchCompletedTests();
+    fetchAnalyticsData(selectedDays);
   }, []);
+
+  useEffect(() => {
+    fetchAnalyticsData(selectedDays);
+  }, [selectedDays]);
   return (
     <div className="px-3 sm:px-6">
       {/* Header */}
@@ -72,7 +193,11 @@ const Reports = () => {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <select className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+            <select 
+              value={selectedDays}
+              onChange={(e) => setSelectedDays(e.target.value)}
+              className="w-full sm:w-auto px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            >
               <option value="7d">{t('last7Days')}</option>
               <option value="30d">{t('last30Days')}</option>
               <option value="90d">{t('last90Days')}</option>
@@ -180,7 +305,7 @@ const Reports = () => {
                 </span>
               </div>
               <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
-                892
+                {loading ? "Loading..." : completedTests}
               </h3>
               <p className="text-gray-600 font-medium text-sm sm:text-base">
                 {t("completedTests")}
@@ -324,8 +449,8 @@ const Reports = () => {
       )}
 
       {activeTab === "candidates" && <CandidatesReport />}
-      {activeTab === "tests" && <TestPerformance />}
-      {activeTab === "trends" && <TimeBasedTrends />}
+      {activeTab === "tests" && <TestPerformance selectedDays={selectedDays} />}
+      {activeTab === "trends" && <TimeBasedTrends selectedDays={selectedDays} />}
     </div>
   );
 };

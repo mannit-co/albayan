@@ -70,7 +70,7 @@ const CandidatesViewModal = ({ candidate, onClose }) => {
       setCustomEmailBody(
         inviteType === "interview"
           ? "Hello,\n\nYou have been invited to a scheduled interview. Please check the details."
-          : "Hello,\n\nYou have been invited to complete your assessment. Please read the instructions carefully."
+          : "Hello,\n\n"
       );
     }
   }, [showInviteModal, candidate, inviteType]);
